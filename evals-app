@@ -1,0 +1,3653 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EVALS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700;900&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #0a0a0c;
+        --surface: #111116;
+        --surface2: #18181f;
+        --border: #2a2a38;
+        --border-bright: #44445a;
+        --text: #e8e8f0;
+        --text-dim: #ccc;
+        --text-dimmer: #666;
+        --accent: #00e5ff;
+        --accent-dim: rgba(0, 229, 255, 0.12);
+        --success: #00ff88;
+        --success-dim: rgba(0, 255, 136, 0.12);
+        --fail: #ff3355;
+        --fail-dim: rgba(255, 51, 85, 0.12);
+        --warn: #ffaa00;
+        --mono: "Share Tech Mono", monospace;
+        --sans: "Barlow Condensed", sans-serif;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--sans);
+        min-height: 100vh;
+        overflow-x: hidden;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background: repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 2px,
+          rgba(0, 0, 0, 0.04) 2px,
+          rgba(0, 0, 0, 0.04) 4px
+        );
+        pointer-events: none;
+        z-index: 9999;
+      }
+
+      .header-bar {
+        border-bottom: 1px solid var(--border);
+        padding: 10px 24px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        background: var(--surface);
+      }
+
+      .logo {
+        font-family: var(--sans);
+        font-weight: 900;
+        font-size: 18px;
+        letter-spacing: 0.25em;
+        color: var(--accent);
+        text-transform: uppercase;
+      }
+
+      .logo span {
+        color: var(--text-dim);
+        font-weight: 300;
+      }
+
+      .main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 28px 20px 60px;
+      }
+
+      .stopwatch-block {
+        text-align: center;
+        padding: 28px 0 20px;
+        position: relative;
+      }
+
+      .stopwatch-label {
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.3em;
+        color: var(--text-dimmer);
+        text-transform: uppercase;
+        margin-bottom: 8px;
+      }
+
+      #timer-display {
+        font-family: var(--mono);
+        font-size: 72px;
+        letter-spacing: 0.05em;
+        color: var(--accent);
+        line-height: 1;
+        text-shadow: 0 0 40px rgba(0, 229, 255, 0.3);
+        transition: color 0.3s;
+      }
+
+      #timer-display.warn {
+        color: var(--warn);
+        text-shadow: 0 0 40px rgba(255, 170, 0, 0.3);
+      }
+      #timer-display.danger {
+        color: var(--fail);
+        text-shadow: 0 0 40px rgba(255, 51, 85, 0.4);
+        animation: pulse 1s ease-in-out infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.6;
+        }
+      }
+
+      .progress-bar-wrap {
+        width: 100%;
+        height: 3px;
+        background: var(--border);
+        margin-top: 14px;
+        border-radius: 2px;
+        overflow: hidden;
+      }
+
+      #progress-bar {
+        height: 100%;
+        width: 0%;
+        background: var(--accent);
+        border-radius: 2px;
+        transition:
+          width 0.5s linear,
+          background 0.5s;
+      }
+
+      #progress-bar.warn {
+        background: var(--warn);
+      }
+      #progress-bar.danger {
+        background: var(--fail);
+      }
+
+      .duration-controls {
+        margin-top: 14px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .duration-label {
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.15em;
+        color: var(--text-dimmer);
+      }
+
+      .duration-presets {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .duration-btn {
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--border-bright);
+        background: var(--surface2);
+        color: var(--text-dim);
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+
+      .duration-btn.active,
+      .duration-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+        background: var(--accent-dim);
+      }
+
+      .duration-custom {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      #duration-input {
+        width: 84px;
+        font-family: var(--mono);
+        font-size: 12px;
+        background: var(--surface2);
+        border: 1px solid var(--border-bright);
+        color: var(--text);
+        border-radius: 999px;
+        padding: 8px 12px;
+        outline: none;
+        text-align: center;
+      }
+
+      #duration-input:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.08);
+      }
+
+      #duration-set-btn {
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--border-bright);
+        background: var(--surface2);
+        color: var(--text-dim);
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+
+      #duration-set-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+        background: var(--accent-dim);
+      }
+
+      .duration-lock-note {
+        width: 100%;
+        text-align: center;
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--text-dimmer);
+        letter-spacing: 0.05em;
+        min-height: 12px;
+      }
+
+      .session-meta-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 16px;
+      }
+
+      .session-meta-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 12px;
+        text-align: left;
+        min-width: 0;
+      }
+
+      .session-meta-label {
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.18em;
+        color: var(--text-dimmer);
+        text-transform: uppercase;
+        margin-bottom: 8px;
+      }
+
+      .session-meta-display {
+        width: 100%;
+        text-align: left;
+        font-family: var(--sans);
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        color: var(--text-dim);
+        text-transform: uppercase;
+        background: var(--surface2);
+        border: 1px dashed transparent;
+        border-radius: 4px;
+        padding: 10px 12px;
+        cursor: pointer;
+        transition: all 0.15s;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .session-meta-display:hover {
+        border-color: var(--border-bright);
+        color: var(--text);
+      }
+
+      .session-meta-display.placeholder {
+        color: var(--text-dimmer);
+        font-weight: 400;
+      }
+      .session-meta-display.disabled {
+        cursor: not-allowed;
+        opacity: 0.7;
+      }
+      .session-meta-display.disabled:hover {
+        border-color: transparent;
+        color: var(--text-dimmer);
+      }
+
+      .session-meta-edit-wrap {
+        display: none;
+        align-items: center;
+        gap: 6px;
+      }
+      .session-meta-edit-wrap.visible {
+        display: flex;
+      }
+      .session-meta-edit-wrap input {
+        width: 100%;
+      }
+
+      #session-title-input,
+      #session-model-input {
+        font-family: var(--sans);
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        background: var(--surface2);
+        border: 1px solid var(--accent);
+        color: var(--text);
+        padding: 5px 12px;
+        border-radius: 3px;
+        outline: none;
+      }
+
+      .title-confirm-btn {
+        font-family: var(--mono);
+        font-size: 11px;
+        background: var(--accent);
+        border: none;
+        color: #000;
+        padding: 6px 12px;
+        border-radius: 3px;
+        cursor: pointer;
+        font-weight: bold;
+      }
+
+      .title-cancel-btn {
+        font-family: var(--mono);
+        font-size: 11px;
+        background: none;
+        border: 1px solid var(--border-bright);
+        color: var(--text-dim);
+        padding: 6px 10px;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+
+      .controls {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+        margin: 20px 0;
+        flex-wrap: wrap;
+      }
+
+      .ctrl-btn {
+        font-family: var(--sans);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        padding: 9px 22px;
+        border-radius: 3px;
+        border: 1px solid var(--border-bright);
+        background: var(--surface2);
+        color: var(--text-dim);
+        cursor: pointer;
+        transition: all 0.15s;
+        user-select: none;
+      }
+
+      .ctrl-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+        background: var(--accent-dim);
+      }
+      .ctrl-btn:active {
+        transform: scale(0.97);
+      }
+      .ctrl-btn.active {
+        border-color: var(--accent);
+        color: var(--accent);
+        background: var(--accent-dim);
+      }
+      .ctrl-btn.danger-btn:hover {
+        border-color: var(--fail);
+        color: var(--fail);
+        background: var(--fail-dim);
+      }
+      .ctrl-btn.new-btn:hover {
+        border-color: var(--success);
+        color: var(--success);
+        background: var(--success-dim);
+      }
+      .ctrl-btn.success-btn:hover {
+        border-color: var(--success);
+        color: var(--success);
+        background: var(--success-dim);
+      }
+      .ctrl-btn:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+      }
+      .ctrl-btn:disabled:hover {
+        border-color: var(--border-bright);
+        color: var(--text-dim);
+        background: var(--surface2);
+      }
+
+      .eval-area {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        gap: 0;
+        margin: 24px 0;
+        align-items: stretch;
+      }
+
+      .verdict-btn {
+        font-family: var(--sans);
+        font-weight: 900;
+        font-size: 36px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        padding: 36px 20px;
+        transition: all 0.1s;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        user-select: none;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .verdict-btn::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        transition: opacity 0.1s;
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      .verdict-btn:active::after {
+        opacity: 1;
+      }
+      .verdict-btn:active {
+        transform: scale(0.97);
+      }
+
+      .verdict-btn .key-hint {
+        font-family: var(--mono);
+        font-size: 11px;
+        font-weight: 400;
+        letter-spacing: 0.2em;
+        opacity: 0.5;
+      }
+
+      #btn-success {
+        background: var(--success-dim);
+        border: 2px solid rgba(0, 255, 136, 0.3);
+        color: var(--success);
+      }
+
+      #btn-success:hover {
+        background: rgba(0, 255, 136, 0.2);
+        border-color: var(--success);
+        box-shadow: 0 0 40px rgba(0, 255, 136, 0.2);
+      }
+
+      #btn-fail {
+        background: var(--fail-dim);
+        border: 2px solid rgba(255, 51, 85, 0.3);
+        color: var(--fail);
+      }
+
+      #btn-fail:hover {
+        background: rgba(255, 51, 85, 0.2);
+        border-color: var(--fail);
+        box-shadow: 0 0 40px rgba(255, 51, 85, 0.2);
+      }
+
+      .verdict-btn:disabled {
+        opacity: 0.25;
+        cursor: not-allowed;
+      }
+      .verdict-btn:disabled:hover {
+        box-shadow: none;
+        transform: none;
+      }
+
+      @keyframes flashGreen {
+        0% {
+          background: rgba(0, 255, 136, 0.5);
+        }
+        100% {
+          background: var(--success-dim);
+        }
+      }
+      @keyframes flashRed {
+        0% {
+          background: rgba(255, 51, 85, 0.5);
+        }
+        100% {
+          background: var(--fail-dim);
+        }
+      }
+
+      .flash-success {
+        animation: flashGreen 0.25s ease-out;
+      }
+      .flash-fail {
+        animation: flashRed 0.25s ease-out;
+      }
+
+      .stats-panel {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 0;
+        padding: 0 28px;
+        border-left: 1px solid var(--border);
+        border-right: 1px solid var(--border);
+        min-width: 160px;
+      }
+
+      .stat-row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        padding: 9px 0;
+        border-bottom: 1px solid var(--border);
+        gap: 16px;
+      }
+
+      .stat-row:last-child {
+        border-bottom: none;
+      }
+
+      .stat-label {
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.2em;
+        color: var(--text-dimmer);
+        text-transform: uppercase;
+      }
+
+      .stat-value {
+        font-family: var(--mono);
+        font-size: 22px;
+        font-weight: bold;
+        line-height: 1;
+      }
+
+      .stat-value.success-val {
+        color: var(--success);
+      }
+      .stat-value.fail-val {
+        color: var(--fail);
+      }
+      .stat-value.total-val {
+        color: var(--accent);
+      }
+      .stat-value.score-val {
+        color: var(--warn);
+      }
+
+      .key-hints {
+        display: flex;
+        justify-content: center;
+        gap: 24px;
+        margin-top: 8px;
+      }
+
+      .key-hint-item {
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--text-dimmer);
+        letter-spacing: 0.1em;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .key-hint-item kbd {
+        background: var(--surface2);
+        border: 1px solid var(--border-bright);
+        border-radius: 3px;
+        padding: 2px 7px;
+        font-size: 10px;
+        color: var(--text-dim);
+      }
+
+      .section-head {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin: 40px 0 16px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .section-title {
+        font-family: var(--sans);
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 0.35em;
+        color: var(--text-dimmer);
+        text-transform: uppercase;
+      }
+
+      .history-head {
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 18px;
+        flex-wrap: wrap;
+      }
+
+      .history-controls {
+        margin-left: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        flex: 1;
+        min-width: 280px;
+      }
+
+      .history-tabs {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+      }
+
+      .history-tab {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: var(--surface2);
+        color: var(--text-dim);
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+
+      .history-tab:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .history-tab.active {
+        border-color: var(--accent);
+        background: var(--accent-dim);
+        color: var(--accent);
+      }
+
+      .history-tab-count {
+        min-width: 18px;
+        height: 18px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 9px;
+        background: rgba(255, 255, 255, 0.06);
+        color: inherit;
+        padding: 0 5px;
+      }
+
+      .history-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      #history-search {
+        min-width: 250px;
+        flex: 1;
+        max-width: 360px;
+        font-family: var(--mono);
+        font-size: 12px;
+        background: var(--surface2);
+        border: 1px solid var(--border-bright);
+        color: var(--text);
+        padding: 10px 14px;
+        border-radius: 999px;
+        outline: none;
+        transition:
+          border-color 0.15s,
+          box-shadow 0.15s;
+      }
+
+      #history-search:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.08);
+      }
+
+      .history-select,
+      #group-modal-select {
+        min-width: 150px;
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        background: var(--surface2);
+        border: 1px solid var(--border-bright);
+        color: var(--text);
+        padding: 10px 14px;
+        border-radius: 999px;
+        outline: none;
+      }
+
+      #group-modal-select {
+        width: 100%;
+        border-radius: 3px;
+        margin-bottom: 12px;
+        min-width: 0;
+      }
+
+      .history-select:focus,
+      #group-modal-select:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.08);
+      }
+
+      .selection-group {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .history-utility-btn,
+      .export-btn {
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        padding: 10px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--border-bright);
+        background: var(--surface2);
+        color: var(--text-dim);
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+
+      .history-utility-btn:hover,
+      .export-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+        background: var(--accent-dim);
+      }
+
+      .export-btn:hover {
+        border-color: var(--success);
+        color: var(--success);
+        background: var(--success-dim);
+      }
+
+      .history-utility-btn.active {
+        border-color: var(--accent);
+        color: var(--accent);
+        background: var(--accent-dim);
+      }
+
+      .history-utility-btn:disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+      }
+
+      .history-selection-note {
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--text-dimmer);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        text-align: right;
+      }
+
+      .history-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        min-height: 110px;
+        max-height: 560px;
+        overflow-y: auto;
+        padding-right: 8px;
+      }
+
+      .history-list::-webkit-scrollbar {
+        width: 10px;
+      }
+      .history-list::-webkit-scrollbar-track {
+        background: var(--surface2);
+        border-radius: 999px;
+      }
+      .history-list::-webkit-scrollbar-thumb {
+        background: var(--border-bright);
+        border-radius: 999px;
+        border: 2px solid var(--surface2);
+      }
+      .history-list::-webkit-scrollbar-thumb:hover {
+        background: var(--accent);
+      }
+
+      .history-empty {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--text-dimmer);
+        text-align: center;
+        padding: 40px;
+        border: 1px dashed var(--border);
+        border-radius: 6px;
+        letter-spacing: 0.05em;
+      }
+
+      .session-card {
+        background: linear-gradient(
+          180deg,
+          rgba(255, 255, 255, 0.01),
+          rgba(255, 255, 255, 0)
+        );
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        overflow: hidden;
+        transition:
+          border-color 0.2s,
+          transform 0.12s;
+      }
+
+      .session-card.completed {
+        border-left: 3px solid var(--success);
+      }
+      .session-card.incomplete {
+        border-left: 3px solid var(--fail);
+      }
+      .session-card.active-card {
+        border-left: 3px solid var(--accent);
+        border-color: var(--border-bright);
+      }
+
+      .session-card-head {
+        display: grid;
+        grid-template-columns: auto auto minmax(0, 1fr) auto auto auto auto;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        background: var(--surface2);
+        border-bottom: 1px solid var(--border);
+        cursor: pointer;
+        user-select: none;
+      }
+
+      .session-card-head:hover {
+        background: #1e1e28;
+      }
+
+      .session-select-wrap {
+        display: none;
+        align-items: center;
+        justify-content: center;
+        margin-top: 1px;
+        flex-shrink: 0;
+      }
+
+      .session-card.select-mode .session-select-wrap {
+        display: inline-flex;
+      }
+
+      .session-select {
+        width: 16px;
+        height: 16px;
+        accent-color: #00e5ff;
+        cursor: pointer;
+      }
+
+      .session-status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      .completed .session-status-dot {
+        background: var(--success);
+        box-shadow: 0 0 8px var(--success);
+      }
+      .incomplete .session-status-dot {
+        background: var(--fail);
+        box-shadow: 0 0 8px var(--fail);
+      }
+      .active-card .session-status-dot {
+        background: var(--accent);
+        box-shadow: 0 0 8px var(--accent);
+        animation: pulse 1.5s infinite;
+      }
+
+      .session-meta-inner {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        min-width: 0;
+      }
+
+      .session-num {
+        font-family: var(--sans);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        color: var(--text);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+      }
+
+      .session-primary-label {
+        display: inline-block;
+        max-width: 240px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        vertical-align: bottom;
+      }
+
+      .session-time-tag,
+      .session-model-tag,
+      .session-group-tag,
+      .session-rank-tag {
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.06em;
+        padding: 3px 8px;
+        border-radius: 999px;
+      }
+
+      .session-model-tag {
+        color: var(--accent);
+        background: var(--accent-dim);
+        border: 1px solid rgba(0, 229, 255, 0.2);
+      }
+
+      .session-time-tag {
+        color: var(--text-dimmer);
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--border);
+      }
+
+      .session-group-tag {
+        color: var(--warn);
+        background: rgba(255, 170, 0, 0.12);
+        border: 1px solid rgba(255, 170, 0, 0.22);
+      }
+
+      .session-rank-tag {
+        color: var(--text-dim);
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--border);
+      }
+
+      .session-quick-stats {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-family: var(--mono);
+        font-size: 11px;
+        margin-left: auto;
+        white-space: nowrap;
+      }
+
+      .qs-s {
+        color: var(--success);
+      }
+      .qs-f {
+        color: var(--fail);
+      }
+
+      .session-score-tag {
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: bold;
+      }
+
+      .session-score-tag.good {
+        color: var(--success);
+      }
+      .session-score-tag.mid {
+        color: var(--warn);
+      }
+      .session-score-tag.bad {
+        color: var(--fail);
+      }
+
+      .session-inline-group {
+        min-width: 126px;
+        max-width: 150px;
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        background: var(--surface);
+        border: 1px solid var(--border-bright);
+        color: var(--text-dim);
+        border-radius: 999px;
+        padding: 6px 10px;
+        cursor: pointer;
+        outline: none;
+      }
+
+      .session-inline-group:hover,
+      .session-inline-group:focus {
+        border-color: var(--accent);
+        color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.08);
+      }
+
+      .session-action-btn {
+        background: none;
+        border: 1px solid var(--border);
+        color: var(--text-dim);
+        cursor: pointer;
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        padding: 6px 10px;
+        border-radius: 999px;
+        transition: all 0.15s;
+        white-space: nowrap;
+      }
+
+      .session-action-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+        background: var(--accent-dim);
+      }
+
+      .session-action-btn.danger:hover {
+        border-color: var(--fail);
+        color: var(--fail);
+        background: var(--fail-dim);
+      }
+
+      .session-collapse-icon {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--text-dimmer);
+        transition: transform 0.2s;
+        margin-left: 2px;
+      }
+
+      .session-card.expanded .session-collapse-icon {
+        transform: rotate(180deg);
+      }
+
+      .session-entries {
+        display: none;
+        padding: 10px 12px;
+        gap: 6px;
+        flex-direction: column;
+        max-height: 240px;
+        overflow-y: auto;
+      }
+
+      .session-card.expanded .session-entries {
+        display: flex;
+      }
+
+      .session-entries::-webkit-scrollbar {
+        width: 8px;
+      }
+      .session-entries::-webkit-scrollbar-thumb {
+        background: var(--border-bright);
+        border-radius: 999px;
+      }
+
+      .session-entries-summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 6px;
+      }
+
+      .session-summary-chip {
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.05em;
+        color: var(--text-dim);
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 4px 8px;
+      }
+
+      .entry-row {
+        display: grid;
+        grid-template-columns: 56px 72px 1fr;
+        align-items: center;
+        gap: 10px;
+        padding: 7px 9px;
+        border-radius: 6px;
+        background: var(--surface2);
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.03em;
+      }
+
+      .entry-row.s {
+        border-left: 2px solid var(--success);
+      }
+      .entry-row.f {
+        border-left: 2px solid var(--fail);
+      }
+
+      .entry-badge {
+        font-size: 10px;
+        font-weight: bold;
+        text-align: center;
+        padding: 2px 0;
+        border-radius: 999px;
+        letter-spacing: 0.1em;
+      }
+
+      .entry-row.s .entry-badge {
+        color: var(--success);
+        background: var(--success-dim);
+      }
+      .entry-row.f .entry-badge {
+        color: var(--fail);
+        background: var(--fail-dim);
+      }
+
+      .entry-timestamp {
+        color: var(--text-dimmer);
+      }
+
+      .resume-btn {
+        display: inline-block;
+        margin-top: 8px;
+        font-family: var(--mono);
+        font-size: 11px;
+        background: var(--accent-dim);
+        border: 1px solid var(--accent);
+        color: var(--accent);
+        padding: 7px 16px;
+        border-radius: 999px;
+        cursor: pointer;
+        letter-spacing: 0.1em;
+        transition: all 0.15s;
+      }
+
+      .resume-btn:hover {
+        background: rgba(0, 229, 255, 0.25);
+      }
+
+      .modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .modal-overlay.visible {
+        display: flex;
+      }
+
+      .modal {
+        background: var(--surface);
+        border: 1px solid var(--border-bright);
+        border-radius: 6px;
+        padding: 28px;
+        width: 340px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+      }
+
+      .modal-title {
+        font-family: var(--sans);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.3em;
+        color: var(--text-dim);
+        text-transform: uppercase;
+        margin-bottom: 16px;
+      }
+
+      .modal input {
+        width: 100%;
+        font-family: var(--mono);
+        font-size: 13px;
+        background: var(--surface2);
+        border: 1px solid var(--border-bright);
+        color: var(--text);
+        padding: 10px 14px;
+        border-radius: 3px;
+        outline: none;
+        margin-bottom: 14px;
+        transition: border-color 0.15s;
+      }
+
+      .modal input:focus {
+        border-color: var(--accent);
+      }
+
+      .modal-btns {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
+      .modal-btns button {
+        font-family: var(--sans);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        padding: 8px 18px;
+        border-radius: 3px;
+        cursor: pointer;
+        border: 1px solid var(--border-bright);
+        background: var(--surface2);
+        color: var(--text-dim);
+        transition: all 0.15s;
+      }
+
+      .modal-btns .primary {
+        border-color: var(--accent);
+        color: var(--accent);
+        background: var(--accent-dim);
+      }
+
+      .modal-btns button:hover {
+        opacity: 0.8;
+      }
+
+      .confirm-modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.75);
+        z-index: 2000;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(4px);
+      }
+
+      .confirm-modal-overlay.visible {
+        display: flex;
+      }
+
+      .confirm-modal {
+        background: var(--surface);
+        border: 1px solid var(--fail);
+        border-radius: 6px;
+        padding: 0;
+        width: 360px;
+        box-shadow:
+          0 0 60px rgba(255, 51, 85, 0.2),
+          0 20px 60px rgba(0, 0, 0, 0.7);
+        overflow: hidden;
+        animation: modalIn 0.15s ease-out;
+      }
+
+      @keyframes modalIn {
+        from {
+          transform: scale(0.94) translateY(8px);
+          opacity: 0;
+        }
+        to {
+          transform: scale(1) translateY(0);
+          opacity: 1;
+        }
+      }
+
+      .confirm-modal-top {
+        padding: 24px 24px 20px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .confirm-modal-icon {
+        font-size: 28px;
+        margin-bottom: 12px;
+        display: block;
+      }
+
+      .confirm-modal-title {
+        font-family: var(--sans);
+        font-size: 18px;
+        font-weight: 900;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: var(--fail);
+        margin-bottom: 8px;
+      }
+
+      .confirm-modal-body {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--text-dim);
+        line-height: 1.7;
+        letter-spacing: 0.03em;
+      }
+
+      .confirm-modal-session-name {
+        color: var(--text);
+        background: var(--surface2);
+        border: 1px solid var(--border-bright);
+        border-radius: 3px;
+        padding: 6px 10px;
+        margin: 10px 0 2px;
+        font-size: 12px;
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .confirm-modal-btns {
+        display: flex;
+        gap: 0;
+      }
+
+      .confirm-modal-btns button {
+        flex: 1;
+        font-family: var(--sans);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        padding: 16px;
+        border: none;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+
+      .confirm-modal-cancel {
+        background: var(--surface2);
+        color: var(--text-dim);
+        border-right: 1px solid var(--border) !important;
+      }
+
+      .confirm-modal-cancel:hover {
+        background: var(--surface);
+        color: var(--text);
+      }
+
+      .confirm-modal-confirm {
+        background: var(--fail-dim);
+        color: var(--fail);
+      }
+
+      .confirm-modal-confirm:hover {
+        background: rgba(255, 51, 85, 0.25);
+      }
+
+      .undo-toast {
+        position: fixed;
+        right: 24px;
+        bottom: 24px;
+        width: min(420px, calc(100vw - 32px));
+        background: rgba(17, 17, 22, 0.96);
+        border: 1px solid var(--border-bright);
+        border-left: 3px solid var(--accent);
+        border-radius: 10px;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+        padding: 14px 14px 12px;
+        display: none;
+        gap: 12px;
+        align-items: center;
+        z-index: 3000;
+        backdrop-filter: blur(8px);
+      }
+
+      .undo-toast.visible {
+        display: flex;
+      }
+
+      .undo-toast-copy {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .undo-toast-title {
+        font-family: var(--sans);
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text);
+        margin-bottom: 4px;
+      }
+
+      .undo-toast-body {
+        font-family: var(--mono);
+        font-size: 11px;
+        line-height: 1.5;
+        color: var(--text-dim);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .undo-toast-side {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 8px;
+        min-width: 96px;
+      }
+
+      .undo-timer {
+        width: 96px;
+        height: 4px;
+        background: var(--surface2);
+        border-radius: 999px;
+        overflow: hidden;
+      }
+
+      #undo-timer-fill {
+        width: 100%;
+        height: 100%;
+        background: var(--accent);
+      }
+
+      #undo-toast-btn {
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--accent);
+        background: var(--accent-dim);
+        color: var(--accent);
+        cursor: pointer;
+      }
+
+      #undo-toast-btn:hover {
+        background: rgba(0, 229, 255, 0.2);
+      }
+
+      @media (max-width: 930px) {
+        .session-card-head {
+          grid-template-columns: auto auto minmax(0, 1fr) auto auto auto;
+        }
+
+        .session-collapse-icon {
+          justify-self: end;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .session-meta-grid,
+        .eval-area {
+          grid-template-columns: 1fr;
+        }
+
+        .stats-panel {
+          border: 1px solid var(--border);
+          border-radius: 6px;
+          padding: 12px;
+          margin: 10px 0;
+        }
+
+        .history-tabs,
+        .history-actions {
+          justify-content: flex-start;
+        }
+
+        #history-search,
+        .history-select,
+        .history-utility-btn,
+        .export-btn {
+          width: 100%;
+          max-width: none;
+          min-width: 0;
+        }
+
+        .session-card-head {
+          grid-template-columns: auto auto minmax(0, 1fr) auto;
+          gap: 8px;
+          align-items: start;
+        }
+
+        .session-inline-group,
+        .session-action-btn {
+          grid-column: 3 / -1;
+          justify-self: start;
+        }
+
+        .session-collapse-icon {
+          grid-column: 4;
+          grid-row: 1;
+          justify-self: end;
+          align-self: center;
+        }
+
+        .session-primary-label {
+          max-width: 170px;
+        }
+
+        .undo-toast {
+          right: 16px;
+          bottom: 16px;
+          left: 16px;
+          width: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header-bar">
+      <div class="logo">EVALS</div>
+    </div>
+
+    <div class="main">
+      <div class="stopwatch-block">
+        <div class="stopwatch-label" id="timer-label">
+          SESSION TIMER · 05:00
+        </div>
+        <div id="timer-display">05:00</div>
+        <div class="progress-bar-wrap"><div id="progress-bar"></div></div>
+
+        <div class="duration-controls" id="duration-controls">
+          <span class="duration-label">DEFAULT DURATION</span>
+          <div class="duration-presets" id="duration-presets">
+            <button class="duration-btn" data-duration="300" type="button">
+              5m
+            </button>
+            <button class="duration-btn" data-duration="600" type="button">
+              10m
+            </button>
+            <button class="duration-btn" data-duration="900" type="button">
+              15m
+            </button>
+            <button class="duration-btn" data-duration="1200" type="button">
+              20m
+            </button>
+          </div>
+          <div class="duration-custom">
+            <input
+              id="duration-input"
+              type="number"
+              min="1"
+              max="180"
+              placeholder="MIN"
+            />
+            <button id="duration-set-btn" type="button">SET</button>
+          </div>
+          <div class="duration-lock-note" id="duration-lock-note"></div>
+        </div>
+
+        <div class="session-meta-grid">
+          <div class="session-meta-card" id="session-title-card">
+            <div class="session-meta-label">SESSION TITLE</div>
+            <button
+              class="session-meta-display placeholder"
+              id="session-title-display"
+              type="button"
+            >
+              START A SESSION TO ADD TITLE
+            </button>
+            <div class="session-meta-edit-wrap" id="session-title-edit-wrap">
+              <input
+                type="text"
+                id="session-title-input"
+                placeholder="SESSION TITLE..."
+                maxlength="60"
+                autocomplete="off"
+              />
+              <button class="title-confirm-btn" id="title-confirm-btn">
+                SET
+              </button>
+              <button class="title-cancel-btn" id="title-cancel-btn">✕</button>
+            </div>
+          </div>
+          <div class="session-meta-card" id="session-model-card">
+            <div class="session-meta-label">MODEL</div>
+            <button
+              class="session-meta-display placeholder"
+              id="session-model-display"
+              type="button"
+            >
+              + SET DEFAULT MODEL
+            </button>
+            <div class="session-meta-edit-wrap" id="session-model-edit-wrap">
+              <input
+                type="text"
+                id="session-model-input"
+                placeholder="MODEL NAME..."
+                maxlength="60"
+                autocomplete="off"
+              />
+              <button class="title-confirm-btn" id="model-confirm-btn">
+                SET
+              </button>
+              <button class="title-cancel-btn" id="model-cancel-btn">✕</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="ctrl-btn" id="btn-play">▶ PLAY</button>
+        <button class="ctrl-btn" id="btn-pause" disabled>⏸ PAUSE</button>
+        <button class="ctrl-btn success-btn" id="btn-finish" disabled>
+          ✓ FINISH
+        </button>
+        <button class="ctrl-btn danger-btn" id="btn-stop" disabled>
+          ■ STOP
+        </button>
+        <button class="ctrl-btn danger-btn" id="btn-erase" disabled>
+          ⌫ ERASE
+        </button>
+        <button class="ctrl-btn new-btn" id="btn-new">+ NEW SESSION</button>
+      </div>
+
+      <div class="eval-area">
+        <button class="verdict-btn" id="btn-fail" disabled>
+          ✕ FAIL
+          <span class="key-hint">← LEFT ARROW</span>
+        </button>
+
+        <div class="stats-panel">
+          <div class="stat-row">
+            <span class="stat-label">SUCCESS</span>
+            <span class="stat-value success-val" id="stat-success">0</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">FAILS</span>
+            <span class="stat-value fail-val" id="stat-fail">0</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">TOTAL</span>
+            <span class="stat-value total-val" id="stat-total">0</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">SCORE</span>
+            <span class="stat-value score-val" id="stat-score">—</span>
+          </div>
+        </div>
+
+        <button class="verdict-btn" id="btn-success" disabled>
+          ✓ SUCCESS
+          <span class="key-hint">→ RIGHT ARROW</span>
+        </button>
+      </div>
+
+      <div class="key-hints">
+        <div class="key-hint-item"><kbd>←</kbd> FAIL</div>
+        <div class="key-hint-item"><kbd>→</kbd> SUCCESS</div>
+      </div>
+
+      <div class="section-head history-head">
+        <span class="section-title">Session History</span>
+        <div class="history-controls">
+          <div class="history-tabs">
+            <button class="history-tab active" data-filter="all">
+              ALL <span class="history-tab-count" id="count-all">0</span>
+            </button>
+            <button class="history-tab" data-filter="active">
+              ACTIVE <span class="history-tab-count" id="count-active">0</span>
+            </button>
+            <button class="history-tab" data-filter="done">
+              DONE <span class="history-tab-count" id="count-done">0</span>
+            </button>
+            <button class="history-tab" data-filter="stopped">
+              STOPPED
+              <span class="history-tab-count" id="count-stopped">0</span>
+            </button>
+          </div>
+          <div class="history-actions history-actions-top">
+            <input
+              type="text"
+              id="history-search"
+              placeholder="SEARCH TITLE OR MODEL"
+              autocomplete="off"
+              maxlength="80"
+            />
+            <select class="history-select" id="history-group-filter">
+              <option value="all">ALL GROUPS</option>
+              <option value="ungrouped">UNGROUPED</option>
+            </select>
+            <select class="history-select" id="history-sort">
+              <option value="newest">RECENT FIRST</option>
+              <option value="oldest">OLDEST FIRST</option>
+              <option value="best">HIGHEST QUALITY (CONFIDENCE)</option>
+              <option value="worst">HIGHEST RISK (CONFIDENCE)</option>
+              <option value="fastest">HIGHEST THROUGHPUT</option>
+            </select>
+          </div>
+          <div class="history-actions history-actions-bottom">
+            <div class="selection-group">
+              <button
+                class="history-utility-btn"
+                id="select-mode-btn"
+                type="button"
+              >
+                SELECT
+              </button>
+              <button
+                class="history-utility-btn"
+                id="select-visible-btn"
+                type="button"
+                disabled
+              >
+                ALL VISIBLE
+              </button>
+              <button
+                class="history-utility-btn"
+                id="clear-selection-btn"
+                type="button"
+                disabled
+              >
+                CLEAR
+              </button>
+              <button
+                class="history-utility-btn"
+                id="group-selected-btn"
+                type="button"
+                disabled
+              >
+                GROUP SELECTED
+              </button>
+              <button
+                class="history-utility-btn"
+                id="new-group-btn"
+                type="button"
+              >
+                NEW GROUP
+              </button>
+            </div>
+            <div class="export-group">
+              <button class="export-btn" data-export="csv">CSV</button>
+              <button class="export-btn" data-export="json">JSON</button>
+            </div>
+          </div>
+          <div class="history-selection-note" id="history-selection-note">
+            EXPORTS FOLLOW YOUR CURRENT FILTERS. IF YOU SELECT ITEMS, EXPORTS
+            USE ONLY THE SELECTED ONES.
+          </div>
+        </div>
+      </div>
+
+      <div class="history-list" id="history-list">
+        <div class="history-empty" id="history-empty">NO SESSIONS YET</div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="rename-modal">
+      <div class="modal">
+        <div class="modal-title">Rename Session</div>
+        <input
+          type="text"
+          id="rename-session-input"
+          placeholder="SESSION TITLE..."
+          maxlength="60"
+          autocomplete="off"
+        />
+        <div class="modal-btns">
+          <button id="rename-modal-cancel">Cancel</button>
+          <button class="primary" id="rename-modal-confirm">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="group-modal">
+      <div class="modal">
+        <div class="modal-title" id="group-modal-title">Group Sessions</div>
+        <select id="group-modal-select">
+          <option value="">SELECT A GROUP</option>
+          <option value="ungrouped">NO GROUP</option>
+        </select>
+        <input
+          type="text"
+          id="group-modal-input"
+          placeholder="OR CREATE NEW GROUP"
+          maxlength="60"
+          autocomplete="off"
+        />
+        <div class="modal-btns">
+          <button id="group-modal-cancel">Cancel</button>
+          <button class="primary" id="group-modal-confirm">Apply</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="confirm-modal-overlay" id="erase-modal">
+      <div class="confirm-modal">
+        <div class="confirm-modal-top">
+          <span class="confirm-modal-icon">⌫</span>
+          <div class="confirm-modal-title">Erase Session</div>
+          <div class="confirm-modal-body">
+            This will permanently delete all entries and cannot be undone.
+            <span
+              class="confirm-modal-session-name"
+              id="erase-modal-session-name"
+              >—</span
+            >
+          </div>
+        </div>
+        <div class="confirm-modal-btns">
+          <button class="confirm-modal-cancel" id="erase-modal-cancel">
+            Cancel
+          </button>
+          <button class="confirm-modal-confirm" id="erase-modal-confirm">
+            ⌫ Erase
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="undo-toast" id="undo-toast">
+      <div class="undo-toast-copy">
+        <div class="undo-toast-title">Change saved</div>
+        <div class="undo-toast-body" id="undo-toast-body">
+          You can undo this for a few seconds.
+        </div>
+      </div>
+      <div class="undo-toast-side">
+        <div class="undo-timer"><div id="undo-timer-fill"></div></div>
+        <button id="undo-toast-btn">Undo</button>
+      </div>
+    </div>
+
+    <script>
+      const DEFAULT_SESSION_DURATION = 5 * 60;
+      const DURATION_PRESETS = [300, 600, 900, 1200];
+      const MIN_DURATION_SECONDS = 60;
+      const MAX_DURATION_SECONDS = 3 * 60 * 60;
+      const STORAGE_KEY = "robot_eval_v5";
+      const FALLBACK_STORAGE_KEYS = [
+        "robot_eval_v4",
+        "robot_eval_v3",
+        "robot_eval_v2",
+      ];
+      const UNDO_WINDOW_MS = 5000;
+      const WILSON_Z = 1.96;
+      const LOCALSTORAGE_ESTIMATED_QUOTA_BYTES = 5 * 1024 * 1024;
+      const LOCALSTORAGE_PRUNE_THRESHOLD = 0.8;
+      const MIN_STORAGE_BUDGET_BYTES = 64 * 1024;
+
+      let state = {
+        running: false,
+        elapsed: 0,
+        currentSession: null,
+        sessions: [],
+        currentModel: "",
+        sessionDuration: DEFAULT_SESSION_DURATION,
+        historyFilter: "all",
+        historyQuery: "",
+        historyGroupFilter: "all",
+        historySort: "newest",
+        selectMode: false,
+        selectedSessionIds: [],
+        groups: [],
+      };
+
+      let timerInterval = null;
+      let undoState = null;
+      let renameTargetId = null;
+      let groupModalMode = "create";
+      let groupModalTargetId = null;
+
+      function sanitizeDuration(seconds) {
+        const numeric = Number(seconds);
+        if (!Number.isFinite(numeric)) return DEFAULT_SESSION_DURATION;
+        return Math.min(
+          MAX_DURATION_SECONDS,
+          Math.max(MIN_DURATION_SECONDS, Math.round(numeric)),
+        );
+      }
+
+      function cloneSession(session) {
+        return {
+          ...session,
+          entries: Array.isArray(session.entries)
+            ? session.entries.map((entry) => ({ ...entry }))
+            : [],
+        };
+      }
+
+      function normalizeSession(session) {
+        const normalized = cloneSession(session || {});
+        normalized.id =
+          normalized.id ||
+          `${Date.now()}_${Math.random().toString(16).slice(2, 8)}`;
+        normalized.model = String(normalized.model || "").trim();
+        normalized.title = String(normalized.title || "").trim();
+        normalized.groupId = String(normalized.groupId || "").trim();
+        normalized.startedAt = normalized.startedAt || new Date().toISOString();
+        normalized.completed = Boolean(normalized.completed);
+        normalized.elapsedAtSave = Number.isFinite(
+          Number(normalized.elapsedAtSave),
+        )
+          ? Number(normalized.elapsedAtSave)
+          : 0;
+        normalized.targetDuration = sanitizeDuration(
+          normalized.targetDuration ||
+            state.sessionDuration ||
+            DEFAULT_SESSION_DURATION,
+        );
+        normalized.entries = Array.isArray(normalized.entries)
+          ? normalized.entries.map((entry) => ({
+              type: entry.type === "fail" ? "fail" : "success",
+              ts: String(entry.ts || "00:00"),
+            }))
+          : [];
+        return normalized;
+      }
+
+      function normalizeGroup(group) {
+        return {
+          id: String(
+            group.id ||
+              `${Date.now()}_${Math.random().toString(16).slice(2, 8)}`,
+          ),
+          name: String(group.name || "").trim(),
+          createdAt: group.createdAt || new Date().toISOString(),
+        };
+      }
+
+      function buildStoragePayload() {
+        return {
+          sessions: state.sessions,
+          currentSession: state.currentSession,
+          elapsed: state.elapsed,
+          currentModel: state.currentModel,
+          sessionDuration: state.sessionDuration,
+          historyFilter: state.historyFilter,
+          historyQuery: state.historyQuery,
+          historyGroupFilter: state.historyGroupFilter,
+          historySort: state.historySort,
+          groups: state.groups,
+        };
+      }
+
+      function estimateBytes(text) {
+        return new Blob([String(text || "")]).size;
+      }
+
+      function getOtherLocalStorageUsageBytes() {
+        let total = 0;
+        for (let index = 0; index < localStorage.length; index += 1) {
+          const key = localStorage.key(index);
+          if (!key || key === STORAGE_KEY) continue;
+          const value = localStorage.getItem(key);
+          total += estimateBytes(key) + estimateBytes(value || "");
+        }
+        return total;
+      }
+
+      function getStorageBudgetBytes() {
+        const targetBudget = Math.floor(
+          LOCALSTORAGE_ESTIMATED_QUOTA_BYTES * LOCALSTORAGE_PRUNE_THRESHOLD,
+        );
+        const remaining = targetBudget - getOtherLocalStorageUsageBytes();
+        return Math.max(MIN_STORAGE_BUDGET_BYTES, remaining);
+      }
+
+      function getOldestArchivedSessionIndex() {
+        if (!state.sessions.length) return -1;
+        let oldestIndex = 0;
+        let oldestTime = Number.POSITIVE_INFINITY;
+        state.sessions.forEach((session, index) => {
+          const parsedTime = new Date(session.startedAt || 0).getTime();
+          const safeTime = Number.isFinite(parsedTime) ? parsedTime : 0;
+          if (safeTime < oldestTime) {
+            oldestTime = safeTime;
+            oldestIndex = index;
+          }
+        });
+        return oldestIndex;
+      }
+
+      function pruneOldestArchivedSession() {
+        const index = getOldestArchivedSessionIndex();
+        if (index < 0) return null;
+        const [removed] = state.sessions.splice(index, 1);
+        state.selectedSessionIds = state.selectedSessionIds.filter(
+          (id) => id !== removed.id,
+        );
+        return removed;
+      }
+
+      function pruneArchivedSessionsToBudget(initialSerialized, budgetBytes) {
+        let serialized = initialSerialized;
+        let removedCount = 0;
+        while (
+          estimateBytes(serialized) > budgetBytes &&
+          state.sessions.length
+        ) {
+          const removed = pruneOldestArchivedSession();
+          if (!removed) break;
+          removedCount += 1;
+          serialized = JSON.stringify(buildStoragePayload());
+        }
+        return { serialized, removedCount };
+      }
+
+      function isQuotaExceeded(error) {
+        if (!error) return false;
+        return (
+          error.name === "QuotaExceededError" ||
+          error.code === 22 ||
+          error.code === 1014
+        );
+      }
+
+      function save() {
+        let serialized = JSON.stringify(buildStoragePayload());
+        const budgetBytes = getStorageBudgetBytes();
+
+        const preemptivePrune = pruneArchivedSessionsToBudget(
+          serialized,
+          budgetBytes,
+        );
+        serialized = preemptivePrune.serialized;
+        if (preemptivePrune.removedCount > 0) {
+          console.warn(
+            `[storage] Pruned ${preemptivePrune.removedCount} old session(s) at ${Math.round(LOCALSTORAGE_PRUNE_THRESHOLD * 100)}% budget.`,
+          );
+        }
+
+        try {
+          localStorage.setItem(STORAGE_KEY, serialized);
+          return;
+        } catch (error) {
+          if (!isQuotaExceeded(error)) {
+            console.warn("Save error", error);
+            return;
+          }
+        }
+
+        let fallbackRemoved = 0;
+        while (state.sessions.length) {
+          const removed = pruneOldestArchivedSession();
+          if (!removed) break;
+          fallbackRemoved += 1;
+          serialized = JSON.stringify(buildStoragePayload());
+          try {
+            localStorage.setItem(STORAGE_KEY, serialized);
+            if (fallbackRemoved > 0) {
+              console.warn(
+                `[storage] Quota fallback removed ${fallbackRemoved} old session(s).`,
+              );
+            }
+            return;
+          } catch (error) {
+            if (!isQuotaExceeded(error)) {
+              console.warn("Save error", error);
+              return;
+            }
+          }
+        }
+
+        try {
+          localStorage.setItem(
+            STORAGE_KEY,
+            JSON.stringify(buildStoragePayload()),
+          );
+        } catch (error) {
+          console.warn("Save failed after pruning sessions.", error);
+        }
+      }
+
+      function load() {
+        try {
+          const raw =
+            localStorage.getItem(STORAGE_KEY) ||
+            FALLBACK_STORAGE_KEYS.map((key) => localStorage.getItem(key)).find(
+              Boolean,
+            );
+          if (!raw) return;
+          const parsed = JSON.parse(raw);
+          state.sessionDuration = sanitizeDuration(
+            parsed.sessionDuration || DEFAULT_SESSION_DURATION,
+          );
+          state.sessions = Array.isArray(parsed.sessions)
+            ? parsed.sessions.map(normalizeSession)
+            : [];
+          state.currentSession = parsed.currentSession
+            ? normalizeSession(parsed.currentSession)
+            : null;
+          state.elapsed = Number.isFinite(Number(parsed.elapsed))
+            ? Number(parsed.elapsed)
+            : 0;
+          state.currentModel = String(parsed.currentModel || "").trim();
+          state.historyFilter = parsed.historyFilter || "all";
+          state.historyQuery = parsed.historyQuery || "";
+          state.historyGroupFilter = parsed.historyGroupFilter || "all";
+          state.historySort = parsed.historySort || "newest";
+          state.groups = Array.isArray(parsed.groups)
+            ? parsed.groups.map(normalizeGroup).filter((group) => group.name)
+            : [];
+          state.running = false;
+          dedupeGroups();
+          syncGroupsFromSessions();
+        } catch (error) {
+          console.warn("Load error", error);
+        }
+      }
+
+      function dedupeGroups() {
+        const seen = new Set();
+        state.groups = state.groups.filter((group) => {
+          const key = group.name.trim().toLowerCase();
+          if (!key || seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+      }
+
+      function syncGroupsFromSessions() {
+        const allSessions = [];
+        if (state.currentSession) allSessions.push(state.currentSession);
+        allSessions.push(...state.sessions);
+        allSessions.forEach((session) => {
+          if (!session.groupId) return;
+          const group = state.groups.find(
+            (item) => item.id === session.groupId,
+          );
+          if (!group) session.groupId = "";
+        });
+      }
+
+      function getCurrentDuration() {
+        if (state.currentSession)
+          return sanitizeDuration(
+            state.currentSession.targetDuration || state.sessionDuration,
+          );
+        return sanitizeDuration(state.sessionDuration);
+      }
+
+      function updateDurationUI() {
+        const timerLabel = document.getElementById("timer-label");
+        timerLabel.textContent = `SESSION TIMER · ${formatTime(getCurrentDuration())}`;
+
+        document.querySelectorAll(".duration-btn").forEach((button) => {
+          const duration = Number(button.dataset.duration);
+          button.classList.toggle("active", duration === state.sessionDuration);
+        });
+
+        const locked = state.running || state.elapsed > 0;
+        document.querySelectorAll(".duration-btn").forEach((button) => {
+          button.disabled = locked;
+        });
+        document.getElementById("duration-input").disabled = locked;
+        document.getElementById("duration-set-btn").disabled = locked;
+        document.getElementById("duration-lock-note").textContent = locked
+          ? "DURATION IS LOCKED AFTER A SESSION STARTS. CREATE A NEW SESSION TO CHANGE IT."
+          : "LAST CHOSEN DURATION IS SAVED AND REUSED UNTIL YOU CHANGE IT.";
+      }
+
+      function setDefaultDuration(seconds) {
+        if (state.running || state.elapsed > 0) return;
+        const duration = sanitizeDuration(seconds);
+        state.sessionDuration = duration;
+        if (state.currentSession && state.elapsed === 0) {
+          state.currentSession.targetDuration = duration;
+        }
+        updateDurationUI();
+        updateTimerDisplay();
+        save();
+      }
+
+      function startTimer() {
+        if (timerInterval || !state.currentSession) return;
+        state.running = true;
+        timerInterval = setInterval(() => {
+          state.elapsed += 1;
+          updateTimerDisplay();
+          if (state.elapsed >= getCurrentDuration()) completeSession();
+        }, 1000);
+      }
+
+      function pauseTimer() {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        state.running = false;
+        save();
+      }
+
+      function formatTime(secs) {
+        const safe = Math.max(0, Number.isFinite(secs) ? Math.floor(secs) : 0);
+        const m = Math.floor(safe / 60)
+          .toString()
+          .padStart(2, "0");
+        const s = (safe % 60).toString().padStart(2, "0");
+        return `${m}:${s}`;
+      }
+
+      function updateTimerDisplay() {
+        const duration = getCurrentDuration();
+        const remaining = Math.max(0, duration - state.elapsed);
+        const display = document.getElementById("timer-display");
+        const bar = document.getElementById("progress-bar");
+        display.textContent = formatTime(remaining);
+        bar.style.width = `${Math.min((state.elapsed / duration) * 100, 100)}%`;
+        display.className = "";
+        bar.className = "";
+        if (remaining <= 30 && remaining > 0) {
+          display.classList.add("danger");
+          bar.classList.add("danger");
+        } else if (remaining <= Math.min(60, Math.floor(duration * 0.2))) {
+          display.classList.add("warn");
+          bar.classList.add("warn");
+        }
+        updateDurationUI();
+      }
+
+      function getSessionStatus(session) {
+        if (session._active) return "active";
+        return session.completed ? "done" : "stopped";
+      }
+
+      function getSessionLabel(session) {
+        if (!session) return "SESSION";
+        if (session.title) return session.title;
+        if (session.startedAt) {
+          return new Date(session.startedAt).toLocaleString("en-US", {
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+        }
+        return "UNTITLED SESSION";
+      }
+
+      function getGroupName(groupId) {
+        if (!groupId) return "";
+        const group = state.groups.find((item) => item.id === groupId);
+        return group ? group.name : "";
+      }
+
+      function ensureGroup(name) {
+        const cleaned = String(name || "").trim();
+        if (!cleaned) return "";
+        const existing = state.groups.find(
+          (group) => group.name.toLowerCase() === cleaned.toLowerCase(),
+        );
+        if (existing) return existing.id;
+        const group = normalizeGroup({ name: cleaned });
+        state.groups.push(group);
+        state.groups.sort((a, b) => a.name.localeCompare(b.name));
+        return group.id;
+      }
+
+      function getStoredSessionById(id) {
+        if (state.currentSession && state.currentSession.id === id)
+          return state.currentSession;
+        return state.sessions.find((session) => session.id === id) || null;
+      }
+
+      function setSessionGroup(id, groupId) {
+        const session = getStoredSessionById(id);
+        if (!session) return;
+        session.groupId = groupId;
+        save();
+        renderHistory();
+      }
+
+      function wilsonBound(successes, total, side = "lower") {
+        if (!total) return side === "lower" ? 0 : 1;
+        const phat = successes / total;
+        const z2 = WILSON_Z * WILSON_Z;
+        const denom = 1 + z2 / total;
+        const center = phat + z2 / (2 * total);
+        const margin =
+          WILSON_Z * Math.sqrt((phat * (1 - phat) + z2 / (4 * total)) / total);
+        const value =
+          side === "lower"
+            ? (center - margin) / denom
+            : (center + margin) / denom;
+        return Math.max(0, Math.min(1, value));
+      }
+
+      function getSessionSummary(session) {
+        const successes = session.entries.filter(
+          (entry) => entry.type === "success",
+        ).length;
+        const fails = session.entries.filter(
+          (entry) => entry.type === "fail",
+        ).length;
+        const total = session.entries.length;
+        const elapsed = session._active
+          ? state.elapsed
+          : session.elapsedAtSave || 0;
+        const score = total > 0 ? Math.round((successes / total) * 100) : null;
+        const successRate = total > 0 ? successes / total : null;
+        const failRate = total > 0 ? fails / total : null;
+        const ratePerMinute = elapsed > 0 ? total / (elapsed / 60) : 0;
+        const wilsonLower = wilsonBound(successes, total, "lower");
+        const wilsonUpper = wilsonBound(successes, total, "upper");
+        const qualityConfidence = wilsonLower;
+        const riskConfidence = total > 0 ? 1 - wilsonUpper : 0;
+        const startedAt = session.startedAt
+          ? new Date(session.startedAt).toLocaleString("en-US", {
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+          : "Unknown";
+        return {
+          successes,
+          fails,
+          total,
+          elapsed,
+          score,
+          successRate,
+          failRate,
+          ratePerMinute,
+          wilsonLower,
+          wilsonUpper,
+          qualityConfidence,
+          riskConfidence,
+          startedAt,
+        };
+      }
+
+      function compareByDate(a, b, direction = "desc") {
+        const aTime = new Date(a.startedAt || 0).getTime();
+        const bTime = new Date(b.startedAt || 0).getTime();
+        return direction === "desc" ? bTime - aTime : aTime - bTime;
+      }
+
+      function compareNumbersDesc(a, b, epsilon = 1e-12) {
+        if (Math.abs(a - b) <= epsilon) return 0;
+        return b - a;
+      }
+
+      function compareNumbersAsc(a, b, epsilon = 1e-12) {
+        if (Math.abs(a - b) <= epsilon) return 0;
+        return a - b;
+      }
+
+      function sortSessions(sessions) {
+        const withMeta = sessions.map((session) => ({
+          session,
+          summary: getSessionSummary(session),
+        }));
+        withMeta.sort((left, right) => {
+          const a = left.session;
+          const b = right.session;
+          const sa = left.summary;
+          const sb = right.summary;
+          if (state.historySort === "oldest") return compareByDate(a, b, "asc");
+          if (state.historySort === "best") {
+            const qualityCmp = compareNumbersDesc(
+              sa.qualityConfidence,
+              sb.qualityConfidence,
+            );
+            if (qualityCmp !== 0) return qualityCmp;
+            if (sb.total !== sa.total) return sb.total - sa.total;
+            if (sa.successRate !== null && sb.successRate !== null) {
+              const successCmp = compareNumbersDesc(
+                sa.successRate,
+                sb.successRate,
+              );
+              if (successCmp !== 0) return successCmp;
+            }
+            return compareByDate(a, b, "desc");
+          }
+          if (state.historySort === "worst") {
+            const riskCmp = compareNumbersDesc(
+              sa.riskConfidence,
+              sb.riskConfidence,
+            );
+            if (riskCmp !== 0) return riskCmp;
+            if (sb.total !== sa.total) return sb.total - sa.total;
+            if (sa.successRate !== null && sb.successRate !== null) {
+              const successCmp = compareNumbersAsc(
+                sa.successRate,
+                sb.successRate,
+              );
+              if (successCmp !== 0) return successCmp;
+            }
+            return compareByDate(a, b, "desc");
+          }
+          if (state.historySort === "fastest") {
+            const rateCmp = compareNumbersDesc(
+              sa.ratePerMinute,
+              sb.ratePerMinute,
+            );
+            if (rateCmp !== 0) return rateCmp;
+            if (sb.total !== sa.total) return sb.total - sa.total;
+            return compareByDate(a, b, "desc");
+          }
+          return compareByDate(a, b, "desc");
+        });
+        return withMeta.map((item) => item.session);
+      }
+
+      function getAllRenderableSessions() {
+        const items = [];
+        if (state.currentSession)
+          items.push({ ...cloneSession(state.currentSession), _active: true });
+        state.sessions.forEach((session) => items.push(cloneSession(session)));
+        return items;
+      }
+
+      function matchesHistorySearch(session, query) {
+        const normalized = query.trim().toLowerCase();
+        if (!normalized) return true;
+        return [
+          session.title || "",
+          session.model || "",
+          getGroupName(session.groupId) || "",
+        ].some((value) => value.toLowerCase().includes(normalized));
+      }
+
+      function matchesGroupFilter(session) {
+        if (state.historyGroupFilter === "all") return true;
+        if (state.historyGroupFilter === "ungrouped") return !session.groupId;
+        return session.groupId === state.historyGroupFilter;
+      }
+
+      function getFilteredRenderableSessions() {
+        const filtered = getAllRenderableSessions().filter((session) => {
+          const filterMatch =
+            state.historyFilter === "all" ||
+            getSessionStatus(session) === state.historyFilter;
+          return (
+            filterMatch &&
+            matchesHistorySearch(session, state.historyQuery) &&
+            matchesGroupFilter(session)
+          );
+        });
+        return sortSessions(filtered);
+      }
+
+      function getSessionsByIds(ids) {
+        const selected = new Set(ids);
+        return getAllRenderableSessions().filter((session) =>
+          selected.has(session.id),
+        );
+      }
+
+      function getExportSessions() {
+        return state.selectedSessionIds.length
+          ? sortSessions(getSessionsByIds(state.selectedSessionIds))
+          : getFilteredRenderableSessions();
+      }
+
+      function updateHistoryTabCounts() {
+        const counts = { all: 0, active: 0, done: 0, stopped: 0 };
+        getAllRenderableSessions().forEach((session) => {
+          counts.all += 1;
+          counts[getSessionStatus(session)] += 1;
+        });
+        document.getElementById("count-all").textContent = counts.all;
+        document.getElementById("count-active").textContent = counts.active;
+        document.getElementById("count-done").textContent = counts.done;
+        document.getElementById("count-stopped").textContent = counts.stopped;
+        document.querySelectorAll(".history-tab").forEach((button) => {
+          button.classList.toggle(
+            "active",
+            button.dataset.filter === state.historyFilter,
+          );
+        });
+      }
+
+      function updateHistoryControls() {
+        const groupFilter = document.getElementById("history-group-filter");
+        const selectedGroup = state.historyGroupFilter;
+        groupFilter.innerHTML =
+          '<option value="all">ALL GROUPS</option><option value="ungrouped">UNGROUPED</option>' +
+          state.groups
+            .map(
+              (group) =>
+                `<option value="${escHtml(group.id)}">${escHtml(group.name)}</option>`,
+            )
+            .join("");
+        groupFilter.value =
+          state.groups.some((group) => group.id === selectedGroup) ||
+          selectedGroup === "all" ||
+          selectedGroup === "ungrouped"
+            ? selectedGroup
+            : "all";
+        if (groupFilter.value !== selectedGroup)
+          state.historyGroupFilter = groupFilter.value;
+        document.getElementById("history-sort").value = state.historySort;
+        document.getElementById("history-search").value = state.historyQuery;
+
+        const hasSelection = state.selectedSessionIds.length > 0;
+        document
+          .getElementById("select-mode-btn")
+          .classList.toggle("active", state.selectMode);
+        document.getElementById("select-mode-btn").textContent =
+          state.selectMode
+            ? `SELECTING ${state.selectedSessionIds.length}`
+            : "SELECT";
+        document.getElementById("select-visible-btn").disabled =
+          !state.selectMode || !getFilteredRenderableSessions().length;
+        document.getElementById("clear-selection-btn").disabled = !hasSelection;
+        document.getElementById("group-selected-btn").disabled = !hasSelection;
+        document.getElementById("history-selection-note").textContent =
+          hasSelection
+            ? `${state.selectedSessionIds.length} SELECTED · EXPORTS USE ONLY THE SELECTED ITEMS.`
+            : "EXPORTS FOLLOW YOUR CURRENT FILTERS. IF YOU SELECT ITEMS, EXPORTS USE ONLY THE SELECTED ONES.";
+      }
+
+      function clearSelection() {
+        state.selectedSessionIds = [];
+      }
+
+      function toggleSelectMode() {
+        state.selectMode = !state.selectMode;
+        if (!state.selectMode) clearSelection();
+        updateHistoryControls();
+        renderHistory();
+      }
+
+      function toggleSessionSelection(id) {
+        if (!state.selectMode) return;
+        const set = new Set(state.selectedSessionIds);
+        if (set.has(id)) set.delete(id);
+        else set.add(id);
+        state.selectedSessionIds = [...set];
+        updateHistoryControls();
+      }
+
+      function selectVisibleSessions() {
+        state.selectedSessionIds = getFilteredRenderableSessions().map(
+          (session) => session.id,
+        );
+        if (state.selectedSessionIds.length) state.selectMode = true;
+        updateHistoryControls();
+        renderHistory();
+      }
+
+      function pruneSelection() {
+        const validIds = new Set(
+          getAllRenderableSessions().map((session) => session.id),
+        );
+        state.selectedSessionIds = state.selectedSessionIds.filter((id) =>
+          validIds.has(id),
+        );
+      }
+
+      function newSession() {
+        if (state.currentSession && !state.currentSession.completed) {
+          state.currentSession.completed = false;
+          state.currentSession.elapsedAtSave = state.elapsed;
+          archiveCurrentSession();
+        }
+        state.currentSession = normalizeSession({
+          id: Date.now().toString(),
+          model: state.currentModel,
+          title: "",
+          groupId: "",
+          startedAt: new Date().toISOString(),
+          entries: [],
+          completed: false,
+          elapsedAtSave: 0,
+          targetDuration: state.sessionDuration,
+        });
+        state.elapsed = 0;
+        pauseTimer();
+        updateTimerDisplay();
+        updateStats();
+        updateButtons(false);
+        updateTitleUI();
+        updateModelUI();
+        renderHistory();
+        save();
+      }
+
+      function archiveCurrentSession() {
+        if (!state.currentSession) return;
+        state.sessions = state.sessions.filter(
+          (session) => session.id !== state.currentSession.id,
+        );
+        state.sessions.unshift(cloneSession(state.currentSession));
+        state.currentSession = null;
+      }
+
+      function completeSession() {
+        if (!state.currentSession) return;
+        pauseTimer();
+        state.currentSession.completed = true;
+        state.currentSession.elapsedAtSave = state.elapsed;
+        archiveCurrentSession();
+        state.elapsed = 0;
+        updateTimerDisplay();
+        updateStats();
+        updateButtons(false);
+        updateTitleUI();
+        renderHistory();
+        save();
+      }
+
+      function stopSession() {
+        if (!state.currentSession) return;
+        pauseTimer();
+        state.currentSession.completed = false;
+        state.currentSession.elapsedAtSave = state.elapsed;
+        archiveCurrentSession();
+        state.elapsed = 0;
+        updateTimerDisplay();
+        updateStats();
+        updateButtons(false);
+        updateTitleUI();
+        renderHistory();
+        save();
+      }
+
+      function eraseCurrentSession() {
+        if (!state.currentSession) return;
+        pauseTimer();
+        const erasedSession = cloneSession({
+          ...state.currentSession,
+          elapsedAtSave: state.elapsed,
+        });
+        state.currentSession = null;
+        state.elapsed = 0;
+        updateTimerDisplay();
+        updateStats();
+        updateButtons(false);
+        updateTitleUI();
+        renderHistory();
+        save();
+        queueUndo(
+          { kind: "current-erase", session: erasedSession },
+          `Erased ${getSessionLabel(erasedSession)}`,
+        );
+      }
+
+      function resumeSession(sessionId) {
+        if (state.currentSession) {
+          state.currentSession.completed = false;
+          state.currentSession.elapsedAtSave = state.elapsed;
+          archiveCurrentSession();
+        }
+        pauseTimer();
+        const index = state.sessions.findIndex(
+          (session) => session.id === sessionId,
+        );
+        if (index === -1) return;
+        const session = state.sessions.splice(index, 1)[0];
+        state.currentSession = normalizeSession(session);
+        state.elapsed = session.elapsedAtSave || 0;
+        state.running = false;
+        updateTimerDisplay();
+        updateStats();
+        updateButtons(false);
+        updateTitleUI();
+        updateModelUI();
+        renderHistory();
+        save();
+      }
+
+      function recordVerdict(type) {
+        if (!state.currentSession || !state.running) return;
+        state.currentSession.entries.push({
+          type,
+          ts: formatTime(state.elapsed),
+        });
+        updateStats();
+        const button =
+          type === "success"
+            ? document.getElementById("btn-success")
+            : document.getElementById("btn-fail");
+        button.classList.remove("flash-success", "flash-fail");
+        void button.offsetWidth;
+        button.classList.add(
+          type === "success" ? "flash-success" : "flash-fail",
+        );
+        save();
+      }
+
+      function updateButtons(running) {
+        const hasSession = Boolean(state.currentSession);
+        document.getElementById("btn-play").disabled = running || !hasSession;
+        document.getElementById("btn-pause").disabled = !running;
+        document.getElementById("btn-finish").disabled = !hasSession;
+        document.getElementById("btn-stop").disabled = !hasSession;
+        document.getElementById("btn-erase").disabled = !hasSession;
+        document.getElementById("btn-success").disabled = !running;
+        document.getElementById("btn-fail").disabled = !running;
+        document.getElementById("btn-play").classList.toggle("active", running);
+        updateDurationUI();
+      }
+
+      function updateStats() {
+        const entries = state.currentSession
+          ? state.currentSession.entries
+          : [];
+        const successes = entries.filter(
+          (entry) => entry.type === "success",
+        ).length;
+        const fails = entries.filter((entry) => entry.type === "fail").length;
+        const total = entries.length;
+        const score = total > 0 ? Math.round((successes / total) * 100) : null;
+        document.getElementById("stat-success").textContent = successes;
+        document.getElementById("stat-fail").textContent = fails;
+        document.getElementById("stat-total").textContent = total;
+        document.getElementById("stat-score").textContent =
+          score !== null ? `${score}%` : "—";
+      }
+
+      function buildEntriesMarkup(session, summary) {
+        const summaryChips = `
+    <div class="session-entries-summary">
+      <span class="session-summary-chip">QUALITY ${(summary.qualityConfidence * 100).toFixed(1)}%</span>
+      <span class="session-summary-chip">RISK ${(summary.riskConfidence * 100).toFixed(1)}%</span>
+      <span class="session-summary-chip">RAW ${summary.score !== null ? `${summary.score}%` : "—"}</span>
+      <span class="session-summary-chip">RATE ${summary.ratePerMinute.toFixed(2)}/MIN</span>
+      <span class="session-summary-chip">DURATION ${formatTime(summary.elapsed)}</span>
+      <span class="session-summary-chip">TOTAL ${summary.total}</span>
+    </div>
+  `;
+        const rows = session.entries.length
+          ? session.entries
+              .map(
+                (entry, index) => `
+        <div class="entry-row ${entry.type === "success" ? "s" : "f"}">
+          <span class="entry-badge">${entry.type === "success" ? "PASS" : "FAIL"}</span>
+          <span class="entry-timestamp">@ ${entry.ts}</span>
+          <span style="font-family:var(--mono);font-size:10px;color:var(--text-dimmer)">#${index + 1}</span>
+        </div>
+      `,
+              )
+              .join("")
+          : '<div style="font-family:var(--mono);font-size:11px;color:var(--text-dimmer);padding:8px 0">No entries yet.</div>';
+        const resumeButton =
+          !session._active && !session.completed
+            ? `<button class="resume-btn" data-resume="${session.id}">▶ RESUME SESSION</button>`
+            : "";
+        return `${summaryChips}${rows}${resumeButton}`;
+      }
+
+      function buildInlineGroupOptions(selectedGroupId) {
+        const options = ['<option value="">NO GROUP</option>'];
+        state.groups.forEach((group) => {
+          options.push(
+            `<option value="${escHtml(group.id)}" ${group.id === selectedGroupId ? "selected" : ""}>${escHtml(group.name)}</option>`,
+          );
+        });
+        options.push('<option value="__new__">+ NEW GROUP…</option>');
+        return options.join("");
+      }
+
+      function buildSessionCard(session) {
+        const summary = getSessionSummary(session);
+        const card = document.createElement("div");
+        card.className = "session-card";
+        card.dataset.id = session.id;
+        if (state.selectMode) card.classList.add("select-mode");
+        if (session._active) card.classList.add("active-card");
+        else if (session.completed) card.classList.add("completed");
+        else card.classList.add("incomplete");
+
+        const scoreText = summary.score !== null ? `${summary.score}%` : "—";
+        const statusLabel = session._active
+          ? "ACTIVE"
+          : session.completed
+            ? "DONE"
+            : "STOPPED";
+        const groupName = getGroupName(session.groupId);
+        const rankLabel = summary.total
+          ? state.historySort === "worst"
+            ? `RISK ${(summary.riskConfidence * 100).toFixed(1)}%`
+            : `QUALITY ${(summary.qualityConfidence * 100).toFixed(1)}%`
+          : state.historySort === "worst"
+            ? "RISK —"
+            : "QUALITY —";
+
+        card.innerHTML = `
+    <div class="session-card-head" data-id="${session.id}">
+      <label class="session-select-wrap" title="Select session">
+        <input class="session-select" type="checkbox" data-select="${session.id}" ${state.selectedSessionIds.includes(session.id) ? "checked" : ""}>
+      </label>
+      <div class="session-status-dot"></div>
+
+      <div class="session-meta-inner">
+        <span class="session-num">${statusLabel} · <span class="session-primary-label">${escHtml(getSessionLabel(session))}</span></span>
+        ${session.title ? `<span class="session-time-tag">${summary.startedAt}</span>` : ""}
+        ${session.model ? `<span class="session-model-tag">${escHtml(session.model)}</span>` : ""}
+        ${groupName ? `<span class="session-group-tag">${escHtml(groupName)}</span>` : ""}
+        <span class="session-time-tag">${formatTime(summary.elapsed)}</span>
+        <span class="session-rank-tag">${rankLabel}</span>
+        <div class="session-quick-stats">
+          <span class="qs-s">✓ ${summary.successes}</span>
+          <span class="qs-f">✕ ${summary.fails}</span>
+          <span class="session-score-tag ${summary.score !== null && summary.score >= 70 ? "good" : summary.score !== null && summary.score >= 40 ? "mid" : "bad"}">${scoreText}</span>
+        </div>
+      </div>
+
+      <select class="session-inline-group" data-inline-group="${session.id}" title="Assign group">
+        ${buildInlineGroupOptions(session.groupId)}
+      </select>
+
+      ${!session._active ? `<button class="session-action-btn" data-rename="${session.id}" title="Rename session">Rename</button>` : ""}
+      ${!session._active ? `<button class="session-action-btn danger" data-del="${session.id}" title="Delete session">Delete</button>` : ""}
+      <span class="session-collapse-icon">▼</span>
+    </div>
+    <div class="session-entries">${buildEntriesMarkup(session, summary)}</div>
+  `;
+
+        card
+          .querySelector(".session-card-head")
+          .addEventListener("click", (event) => {
+            if (
+              event.target.closest(".session-action-btn") ||
+              event.target.closest(".session-select-wrap") ||
+              event.target.closest(".session-inline-group")
+            )
+              return;
+            card.classList.toggle("expanded");
+          });
+
+        const selectBox = card.querySelector("[data-select]");
+        if (selectBox) {
+          selectBox.addEventListener("click", (event) =>
+            event.stopPropagation(),
+          );
+          selectBox.addEventListener("change", () =>
+            toggleSessionSelection(session.id),
+          );
+        }
+
+        const inlineGroup = card.querySelector("[data-inline-group]");
+        if (inlineGroup) {
+          inlineGroup.addEventListener("click", (event) =>
+            event.stopPropagation(),
+          );
+          inlineGroup.addEventListener("change", (event) => {
+            event.stopPropagation();
+            const value = event.target.value;
+            if (value === "__new__") {
+              event.target.value = session.groupId || "";
+              openGroupModal("single", session.id);
+              return;
+            }
+            setSessionGroup(session.id, value);
+          });
+        }
+
+        const deleteButton = card.querySelector("[data-del]");
+        if (deleteButton) {
+          deleteButton.addEventListener("click", (event) => {
+            event.stopPropagation();
+            event.preventDefault();
+            deleteSession(session.id);
+          });
+        }
+
+        const renameButton = card.querySelector("[data-rename]");
+        if (renameButton) {
+          renameButton.addEventListener("click", (event) => {
+            event.stopPropagation();
+            event.preventDefault();
+            openRenameModal(session.id);
+          });
+        }
+
+        const resumeButton = card.querySelector("[data-resume]");
+        if (resumeButton) {
+          resumeButton.addEventListener("click", (event) => {
+            event.stopPropagation();
+            resumeSession(session.id);
+          });
+        }
+
+        return card;
+      }
+
+      function renderHistory() {
+        pruneSelection();
+        const list = document.getElementById("history-list");
+        const empty = document.getElementById("history-empty");
+        const items = getFilteredRenderableSessions();
+        updateHistoryTabCounts();
+        updateHistoryControls();
+        [...list.querySelectorAll(".session-card")].forEach((card) =>
+          card.remove(),
+        );
+        if (!items.length) {
+          empty.style.display = "block";
+          empty.textContent = getAllRenderableSessions().length
+            ? "NO SESSIONS MATCH THIS FILTER"
+            : "NO SESSIONS YET";
+          return;
+        }
+        empty.style.display = "none";
+        items.forEach((session) => list.appendChild(buildSessionCard(session)));
+      }
+
+      function deleteSession(id) {
+        const index = state.sessions.findIndex((session) => session.id === id);
+        if (index === -1) return;
+        const deletedSession = state.sessions.splice(index, 1)[0];
+        save();
+        renderHistory();
+        queueUndo(
+          { kind: "history-delete", session: deletedSession, index },
+          `Deleted ${getSessionLabel(deletedSession)}`,
+        );
+      }
+
+      function escHtml(str) {
+        return String(str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function setModel(name) {
+        state.currentModel = String(name || "").trim();
+        if (state.currentSession)
+          state.currentSession.model = state.currentModel;
+        updateModelUI();
+        save();
+        renderHistory();
+      }
+
+      function updateModelUI() {
+        const display = document.getElementById("session-model-display");
+        const editWrap = document.getElementById("session-model-edit-wrap");
+        editWrap.classList.remove("visible");
+        if (state.currentModel) {
+          display.textContent = state.currentModel;
+          display.classList.remove("placeholder");
+        } else {
+          display.textContent = "+ SET DEFAULT MODEL";
+          display.classList.add("placeholder");
+        }
+        display.style.display = "";
+      }
+
+      function openModelEdit() {
+        const display = document.getElementById("session-model-display");
+        const editWrap = document.getElementById("session-model-edit-wrap");
+        const input = document.getElementById("session-model-input");
+        display.style.display = "none";
+        editWrap.classList.add("visible");
+        input.value = state.currentModel || "";
+        input.focus();
+        input.select();
+      }
+
+      function commitModelEdit() {
+        setModel(document.getElementById("session-model-input").value);
+      }
+
+      function cancelModelEdit() {
+        updateModelUI();
+      }
+
+      function updateTitleUI() {
+        const display = document.getElementById("session-title-display");
+        const editWrap = document.getElementById("session-title-edit-wrap");
+        editWrap.classList.remove("visible");
+        if (!state.currentSession) {
+          display.textContent = "START A SESSION TO ADD TITLE";
+          display.classList.add("placeholder", "disabled");
+          display.style.display = "";
+          return;
+        }
+        const title = state.currentSession.title || "";
+        display.classList.remove("disabled");
+        if (title) {
+          display.textContent = title;
+          display.classList.remove("placeholder");
+        } else {
+          display.textContent = "+ ADD SESSION TITLE";
+          display.classList.add("placeholder");
+        }
+        display.style.display = "";
+      }
+
+      function openTitleEdit() {
+        if (!state.currentSession) return;
+        const display = document.getElementById("session-title-display");
+        const editWrap = document.getElementById("session-title-edit-wrap");
+        const input = document.getElementById("session-title-input");
+        display.style.display = "none";
+        editWrap.classList.add("visible");
+        input.value = state.currentSession.title || "";
+        input.focus();
+        input.select();
+      }
+
+      function commitTitleEdit() {
+        if (!state.currentSession) return;
+        state.currentSession.title = document
+          .getElementById("session-title-input")
+          .value.trim();
+        save();
+        renderHistory();
+        updateTitleUI();
+      }
+
+      function cancelTitleEdit() {
+        updateTitleUI();
+      }
+
+      function openRenameModal(id) {
+        const session = state.sessions.find((item) => item.id === id);
+        if (!session) return;
+        renameTargetId = id;
+        document.getElementById("rename-session-input").value =
+          session.title || "";
+        document.getElementById("rename-modal").classList.add("visible");
+        document.getElementById("rename-session-input").focus();
+        document.getElementById("rename-session-input").select();
+      }
+
+      function closeRenameModal() {
+        renameTargetId = null;
+        document.getElementById("rename-modal").classList.remove("visible");
+      }
+
+      function commitRenameModal() {
+        if (!renameTargetId) return;
+        const session = state.sessions.find(
+          (item) => item.id === renameTargetId,
+        );
+        if (!session) {
+          closeRenameModal();
+          return;
+        }
+        session.title = document
+          .getElementById("rename-session-input")
+          .value.trim();
+        save();
+        renderHistory();
+        closeRenameModal();
+      }
+
+      function populateGroupModalSelect() {
+        const select = document.getElementById("group-modal-select");
+        const currentValue = select.value;
+        select.innerHTML =
+          '<option value="">SELECT A GROUP</option><option value="ungrouped">NO GROUP</option>' +
+          state.groups
+            .map(
+              (group) =>
+                `<option value="${escHtml(group.id)}">${escHtml(group.name)}</option>`,
+            )
+            .join("");
+        if ([...select.options].some((option) => option.value === currentValue))
+          select.value = currentValue;
+      }
+
+      function openGroupModal(mode, targetSessionId = null) {
+        groupModalMode = mode;
+        groupModalTargetId = targetSessionId;
+        populateGroupModalSelect();
+
+        const modalTitle = document.getElementById("group-modal-title");
+        const confirmBtn = document.getElementById("group-modal-confirm");
+        const input = document.getElementById("group-modal-input");
+        const select = document.getElementById("group-modal-select");
+
+        input.value = "";
+        select.value = "";
+
+        if (mode === "assign") {
+          modalTitle.textContent = "Group Selected Sessions";
+          confirmBtn.textContent = "Apply";
+        } else if (mode === "single") {
+          modalTitle.textContent = "Set Session Group";
+          confirmBtn.textContent = "Save";
+          const session = getStoredSessionById(targetSessionId);
+          if (session && session.groupId) select.value = session.groupId;
+          if (session && !session.groupId) select.value = "ungrouped";
+        } else {
+          modalTitle.textContent = "Create Group";
+          confirmBtn.textContent = "Create";
+        }
+
+        document.getElementById("group-modal").classList.add("visible");
+        if (mode === "create") input.focus();
+        else select.focus();
+      }
+
+      function closeGroupModal() {
+        groupModalTargetId = null;
+        document.getElementById("group-modal").classList.remove("visible");
+      }
+
+      function getSelectedStoredSessions() {
+        const ids = new Set(state.selectedSessionIds);
+        const selected = [];
+        if (state.currentSession && ids.has(state.currentSession.id))
+          selected.push(state.currentSession);
+        state.sessions.forEach((session) => {
+          if (ids.has(session.id)) selected.push(session);
+        });
+        return selected;
+      }
+
+      function applyGroupFromModal() {
+        const selectValue = document.getElementById("group-modal-select").value;
+        const typedName = document
+          .getElementById("group-modal-input")
+          .value.trim();
+
+        if (groupModalMode === "create") {
+          const createdId = ensureGroup(typedName);
+          if (!createdId) return;
+          save();
+          closeGroupModal();
+          renderHistory();
+          return;
+        }
+
+        let groupId = "";
+        if (typedName) groupId = ensureGroup(typedName);
+        else if (selectValue === "ungrouped") groupId = "";
+        else if (selectValue) groupId = selectValue;
+        else return;
+
+        let targets = [];
+        if (groupModalMode === "single") {
+          const session = getStoredSessionById(groupModalTargetId);
+          if (session) targets = [session];
+        } else {
+          targets = getSelectedStoredSessions();
+        }
+
+        if (!targets.length) return;
+
+        targets.forEach((session) => {
+          session.groupId = groupId;
+        });
+
+        save();
+        closeGroupModal();
+        renderHistory();
+      }
+
+      function showEraseModal() {
+        if (!state.currentSession) return;
+        const label = getSessionLabel(state.currentSession);
+        document.getElementById("erase-modal-session-name").textContent =
+          `${label}${state.currentSession.entries.length ? ` · ${state.currentSession.entries.length} entries` : " · no entries"}`;
+        document.getElementById("erase-modal").classList.add("visible");
+        document.getElementById("erase-modal-confirm").focus();
+      }
+
+      function hideEraseModal() {
+        document.getElementById("erase-modal").classList.remove("visible");
+      }
+
+      function queueUndo(payload, message) {
+        clearUndo(false);
+        const toast = document.getElementById("undo-toast");
+        const body = document.getElementById("undo-toast-body");
+        const fill = document.getElementById("undo-timer-fill");
+        body.textContent = `${message}. Undo available for ${Math.floor(UNDO_WINDOW_MS / 1000)} seconds.`;
+        toast.classList.add("visible");
+        fill.style.transition = "none";
+        fill.style.width = "100%";
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            fill.style.transition = `width ${UNDO_WINDOW_MS}ms linear`;
+            fill.style.width = "0%";
+          });
+        });
+        undoState = {
+          payload,
+          timeoutId: setTimeout(() => clearUndo(), UNDO_WINDOW_MS),
+        };
+      }
+
+      function clearUndo(resetBar = true) {
+        if (undoState && undoState.timeoutId) clearTimeout(undoState.timeoutId);
+        undoState = null;
+        document.getElementById("undo-toast").classList.remove("visible");
+        if (resetBar) {
+          const fill = document.getElementById("undo-timer-fill");
+          fill.style.transition = "none";
+          fill.style.width = "100%";
+        }
+      }
+
+      function undoLastRemoval() {
+        if (!undoState) return;
+        const payload = undoState.payload;
+        clearUndo();
+        if (payload.kind === "current-erase") {
+          if (state.currentSession) {
+            state.currentSession.completed = false;
+            state.currentSession.elapsedAtSave = state.elapsed;
+            archiveCurrentSession();
+          }
+          pauseTimer();
+          state.currentSession = normalizeSession(payload.session);
+          state.elapsed = payload.session.elapsedAtSave || 0;
+          state.running = false;
+          updateTimerDisplay();
+          updateStats();
+          updateButtons(false);
+          updateTitleUI();
+          updateModelUI();
+          renderHistory();
+          save();
+          return;
+        }
+        if (payload.kind === "history-delete") {
+          const index = Math.max(
+            0,
+            Math.min(payload.index, state.sessions.length),
+          );
+          state.sessions.splice(index, 0, normalizeSession(payload.session));
+          save();
+          renderHistory();
+        }
+      }
+
+      function setHistoryFilter(filter) {
+        state.historyFilter = filter;
+        save();
+        renderHistory();
+      }
+
+      function setHistoryQuery(query) {
+        state.historyQuery = query;
+        save();
+        renderHistory();
+      }
+
+      function setHistoryGroupFilter(groupId) {
+        state.historyGroupFilter = groupId;
+        save();
+        renderHistory();
+      }
+
+      function setHistorySort(sort) {
+        state.historySort = sort;
+        save();
+        renderHistory();
+      }
+
+      function getExportRows() {
+        return getExportSessions().map((session) => {
+          const summary = getSessionSummary(session);
+          return {
+            session_id: session.id,
+            status: getSessionStatus(session).toUpperCase(),
+            title: session.title || "",
+            display_label: getSessionLabel(session),
+            model: session.model || "",
+            group: getGroupName(session.groupId),
+            started_at: session.startedAt || "",
+            target_duration_seconds: sanitizeDuration(
+              session.targetDuration || state.sessionDuration,
+            ),
+            duration_seconds: summary.elapsed,
+            duration_display: formatTime(summary.elapsed),
+            successes: summary.successes,
+            fails: summary.fails,
+            total: summary.total,
+            score_percent: summary.score !== null ? summary.score : "",
+            quality_confidence_percent: summary.total
+              ? Number((summary.qualityConfidence * 100).toFixed(2))
+              : "",
+            risk_confidence_percent: summary.total
+              ? Number((summary.riskConfidence * 100).toFixed(2))
+              : "",
+            wilson_lower_percent: summary.total
+              ? Number((summary.wilsonLower * 100).toFixed(2))
+              : "",
+            rate_per_minute: Number(summary.ratePerMinute.toFixed(4)),
+            entries: session.entries
+              .map((entry) => `${entry.type.toUpperCase()}@${entry.ts}`)
+              .join(" | "),
+            entries_json: JSON.stringify(session.entries),
+          };
+        });
+      }
+
+      function escapeCsv(value) {
+        const normalized = value == null ? "" : String(value);
+        const needsQuotes =
+          normalized.includes(",") ||
+          normalized.includes('"') ||
+          normalized.includes("\n");
+        return needsQuotes ? `"${normalized.replace(/"/g, '""')}"` : normalized;
+      }
+
+      function downloadFile(content, filename, mimeType) {
+        const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+
+      function exportCsv() {
+        const rows = getExportRows();
+        if (!rows.length) return;
+        const headers = Object.keys(rows[0]);
+        const csv = [headers.join(",")]
+          .concat(
+            rows.map((row) =>
+              headers.map((header) => escapeCsv(row[header])).join(","),
+            ),
+          )
+          .join("\n");
+        downloadFile(csv, "robot_eval_export.csv", "text/csv;charset=utf-8;");
+      }
+
+      function exportJson() {
+        const sessions = getExportSessions().map((session) => {
+          const summary = getSessionSummary(session);
+          return {
+            ...cloneSession(session),
+            status: getSessionStatus(session),
+            elapsed: session._active
+              ? state.elapsed
+              : session.elapsedAtSave || 0,
+            groupName: getGroupName(session.groupId),
+            targetDuration: sanitizeDuration(
+              session.targetDuration || state.sessionDuration,
+            ),
+            wilsonLower: Number(summary.wilsonLower.toFixed(6)),
+            qualityConfidence: Number(summary.qualityConfidence.toFixed(6)),
+            riskConfidence: Number(summary.riskConfidence.toFixed(6)),
+            ratePerMinute: Number(summary.ratePerMinute.toFixed(6)),
+          };
+        });
+        if (!sessions.length) return;
+        downloadFile(
+          JSON.stringify(sessions, null, 2),
+          "robot_eval_export.json",
+          "application/json;charset=utf-8;",
+        );
+      }
+
+      function exportHistory(type) {
+        if (type === "csv") exportCsv();
+        if (type === "json") exportJson();
+      }
+
+      document.getElementById("btn-play").addEventListener("click", () => {
+        if (!state.currentSession) return;
+        startTimer();
+        updateButtons(true);
+      });
+
+      document.getElementById("btn-pause").addEventListener("click", () => {
+        pauseTimer();
+        updateButtons(false);
+      });
+
+      document
+        .getElementById("btn-finish")
+        .addEventListener("click", completeSession);
+      document
+        .getElementById("btn-stop")
+        .addEventListener("click", stopSession);
+      document
+        .getElementById("btn-erase")
+        .addEventListener("click", showEraseModal);
+      document.getElementById("btn-new").addEventListener("click", newSession);
+
+      document.getElementById("btn-success").addEventListener("click", () => {
+        recordVerdict("success");
+        renderHistory();
+      });
+
+      document.getElementById("btn-fail").addEventListener("click", () => {
+        recordVerdict("fail");
+        renderHistory();
+      });
+
+      document.querySelectorAll(".duration-btn").forEach((button) => {
+        button.addEventListener("click", () =>
+          setDefaultDuration(Number(button.dataset.duration)),
+        );
+      });
+
+      document
+        .getElementById("duration-set-btn")
+        .addEventListener("click", () => {
+          const minutes = Number(
+            document.getElementById("duration-input").value,
+          );
+          if (!Number.isFinite(minutes) || minutes <= 0) return;
+          setDefaultDuration(minutes * 60);
+        });
+
+      document
+        .getElementById("duration-input")
+        .addEventListener("keydown", (event) => {
+          if (event.key === "Enter") {
+            const minutes = Number(
+              document.getElementById("duration-input").value,
+            );
+            if (!Number.isFinite(minutes) || minutes <= 0) return;
+            setDefaultDuration(minutes * 60);
+          }
+        });
+
+      document.addEventListener("keydown", (event) => {
+        if (
+          ["INPUT", "TEXTAREA", "SELECT"].includes(
+            document.activeElement.tagName,
+          )
+        )
+          return;
+        if (event.key === "ArrowRight") {
+          event.preventDefault();
+          if (!document.getElementById("btn-success").disabled) {
+            recordVerdict("success");
+            renderHistory();
+          }
+        } else if (event.key === "ArrowLeft") {
+          event.preventDefault();
+          if (!document.getElementById("btn-fail").disabled) {
+            recordVerdict("fail");
+            renderHistory();
+          }
+        } else if (
+          event.key === "Escape" &&
+          document.getElementById("erase-modal").classList.contains("visible")
+        ) {
+          hideEraseModal();
+        } else if (
+          event.key === "Escape" &&
+          document.getElementById("rename-modal").classList.contains("visible")
+        ) {
+          closeRenameModal();
+        } else if (
+          event.key === "Escape" &&
+          document.getElementById("group-modal").classList.contains("visible")
+        ) {
+          closeGroupModal();
+        } else if (
+          (event.key === "z" || event.key === "Z") &&
+          (event.metaKey || event.ctrlKey) &&
+          undoState
+        ) {
+          event.preventDefault();
+          undoLastRemoval();
+        }
+      });
+
+      document
+        .getElementById("session-model-display")
+        .addEventListener("click", openModelEdit);
+      document
+        .getElementById("model-confirm-btn")
+        .addEventListener("click", commitModelEdit);
+      document
+        .getElementById("model-cancel-btn")
+        .addEventListener("click", cancelModelEdit);
+      document
+        .getElementById("session-model-input")
+        .addEventListener("keydown", (event) => {
+          if (event.key === "Enter") commitModelEdit();
+          if (event.key === "Escape") cancelModelEdit();
+        });
+
+      document
+        .getElementById("session-title-display")
+        .addEventListener("click", openTitleEdit);
+      document
+        .getElementById("title-confirm-btn")
+        .addEventListener("click", commitTitleEdit);
+      document
+        .getElementById("title-cancel-btn")
+        .addEventListener("click", cancelTitleEdit);
+      document
+        .getElementById("session-title-input")
+        .addEventListener("keydown", (event) => {
+          if (event.key === "Enter") commitTitleEdit();
+          if (event.key === "Escape") cancelTitleEdit();
+        });
+
+      document
+        .getElementById("erase-modal-cancel")
+        .addEventListener("click", hideEraseModal);
+      document
+        .getElementById("erase-modal-confirm")
+        .addEventListener("click", () => {
+          hideEraseModal();
+          eraseCurrentSession();
+        });
+      document
+        .getElementById("erase-modal")
+        .addEventListener("click", (event) => {
+          if (event.target === document.getElementById("erase-modal"))
+            hideEraseModal();
+        });
+
+      document.querySelectorAll(".history-tab").forEach((button) => {
+        button.addEventListener("click", () =>
+          setHistoryFilter(button.dataset.filter),
+        );
+      });
+
+      document
+        .getElementById("history-search")
+        .addEventListener("input", (event) =>
+          setHistoryQuery(event.target.value),
+        );
+      document
+        .getElementById("history-group-filter")
+        .addEventListener("change", (event) =>
+          setHistoryGroupFilter(event.target.value),
+        );
+      document
+        .getElementById("history-sort")
+        .addEventListener("change", (event) =>
+          setHistorySort(event.target.value),
+        );
+      document
+        .getElementById("select-mode-btn")
+        .addEventListener("click", toggleSelectMode);
+      document
+        .getElementById("select-visible-btn")
+        .addEventListener("click", selectVisibleSessions);
+      document
+        .getElementById("clear-selection-btn")
+        .addEventListener("click", () => {
+          clearSelection();
+          updateHistoryControls();
+          renderHistory();
+        });
+      document
+        .getElementById("group-selected-btn")
+        .addEventListener("click", () => openGroupModal("assign"));
+      document
+        .getElementById("new-group-btn")
+        .addEventListener("click", () => openGroupModal("create"));
+
+      document.querySelectorAll("[data-export]").forEach((button) => {
+        button.addEventListener("click", () =>
+          exportHistory(button.dataset.export),
+        );
+      });
+
+      document
+        .getElementById("rename-modal-cancel")
+        .addEventListener("click", closeRenameModal);
+      document
+        .getElementById("rename-modal-confirm")
+        .addEventListener("click", commitRenameModal);
+      document
+        .getElementById("rename-modal")
+        .addEventListener("click", (event) => {
+          if (event.target === document.getElementById("rename-modal"))
+            closeRenameModal();
+        });
+      document
+        .getElementById("rename-session-input")
+        .addEventListener("keydown", (event) => {
+          if (event.key === "Enter") commitRenameModal();
+          if (event.key === "Escape") closeRenameModal();
+        });
+
+      document
+        .getElementById("group-modal-cancel")
+        .addEventListener("click", closeGroupModal);
+      document
+        .getElementById("group-modal-confirm")
+        .addEventListener("click", applyGroupFromModal);
+      document
+        .getElementById("group-modal")
+        .addEventListener("click", (event) => {
+          if (event.target === document.getElementById("group-modal"))
+            closeGroupModal();
+        });
+      document
+        .getElementById("group-modal-input")
+        .addEventListener("keydown", (event) => {
+          if (event.key === "Enter") applyGroupFromModal();
+          if (event.key === "Escape") closeGroupModal();
+        });
+      document
+        .getElementById("group-modal-select")
+        .addEventListener("keydown", (event) => {
+          if (event.key === "Enter") applyGroupFromModal();
+          if (event.key === "Escape") closeGroupModal();
+        });
+
+      document
+        .getElementById("undo-toast-btn")
+        .addEventListener("click", undoLastRemoval);
+
+      setInterval(() => {
+        if (state.currentSession) {
+          state.currentSession.elapsedAtSave = state.elapsed;
+          save();
+        }
+      }, 3000);
+
+      load();
+      updateTimerDisplay();
+      updateStats();
+      updateButtons(false);
+      updateTitleUI();
+      updateModelUI();
+      renderHistory();
+      if (state.currentSession) updateButtons(false);
+    </script>
+  </body>
+</html>
