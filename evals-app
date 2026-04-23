@@ -47,6 +47,10 @@
         overflow-x: hidden;
       }
 
+      body.modal-open {
+        overflow: hidden;
+      }
+
       body::before {
         content: "";
         position: fixed;
@@ -86,9 +90,9 @@
       }
 
       .main {
-        max-width: 980px;
+        max-width: 1180px;
         margin: 0 auto;
-        padding: 28px 20px 60px;
+        padding: 30px 24px 68px;
       }
 
       .stopwatch-block {
@@ -821,9 +825,11 @@
         flex-direction: column;
         gap: 12px;
         min-height: 110px;
-        max-height: 560px;
+        max-height: min(62vh, 560px);
         overflow-y: auto;
-        padding-right: 8px;
+        overscroll-behavior: contain;
+        scrollbar-gutter: stable;
+        padding-right: 10px;
       }
 
       .history-list::-webkit-scrollbar {
@@ -862,6 +868,7 @@
         border: 1px solid var(--border);
         border-radius: 8px;
         overflow: hidden;
+        flex: 0 0 auto;
         transition:
           border-color 0.2s,
           transform 0.12s;
@@ -966,7 +973,8 @@
       .session-time-tag,
       .session-model-tag,
       .session-group-tag,
-      .session-rank-tag {
+      .session-rank-tag,
+      .session-comment-tag {
         font-family: var(--mono);
         font-size: 10px;
         letter-spacing: 0.06em;
@@ -996,6 +1004,12 @@
         color: var(--text-dim);
         background: rgba(255, 255, 255, 0.04);
         border: 1px solid var(--border);
+      }
+
+      .session-comment-tag {
+        color: var(--accent);
+        background: var(--accent-dim);
+        border: 1px solid rgba(0, 229, 255, 0.25);
       }
 
       .session-quick-stats {
@@ -1132,6 +1146,55 @@
         padding: 4px 8px;
       }
 
+      .session-comment-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 10px;
+        margin-bottom: 8px;
+        border: 1px dashed var(--border);
+        border-radius: 7px;
+        background: rgba(255, 255, 255, 0.015);
+      }
+
+      .session-comment-label {
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--text-dimmer);
+      }
+
+      .session-comment-input {
+        width: 100%;
+        min-height: 62px;
+        max-height: 180px;
+        resize: vertical;
+        border: 1px solid var(--border-bright);
+        border-radius: 6px;
+        background: var(--surface);
+        color: var(--text);
+        font-family: var(--mono);
+        font-size: 12px;
+        line-height: 1.5;
+        padding: 8px 10px;
+        outline: none;
+      }
+
+      .session-comment-input:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.08);
+      }
+
+      .session-comment-meta {
+        font-family: var(--mono);
+        font-size: 9px;
+        color: var(--text-dimmer);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        text-align: right;
+      }
+
       .entry-row {
         display: grid;
         grid-template-columns: 56px 72px 1fr;
@@ -1216,6 +1279,15 @@
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
       }
 
+      .modal.modal-wide {
+        width: min(960px, calc(100vw - 26px));
+        max-height: min(82vh, 760px);
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
       .modal-title {
         font-family: var(--sans);
         font-size: 13px;
@@ -1248,6 +1320,288 @@
         display: flex;
         gap: 8px;
         justify-content: flex-end;
+      }
+
+      .summary-modal-subtitle {
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        color: var(--text-dimmer);
+        text-transform: uppercase;
+      }
+
+      .summary-modal-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .summary-toolbar-controls {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .summary-view-switch {
+        display: inline-flex;
+        gap: 6px;
+      }
+
+      .summary-toolbar-label {
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.1em;
+        color: var(--text-dimmer);
+        text-transform: uppercase;
+      }
+
+      .summary-control {
+        min-width: 130px;
+        padding: 8px 12px;
+      }
+
+      .summary-metrics {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .summary-metric-card {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface2);
+        padding: 12px;
+      }
+
+      .summary-metric-label {
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--text-dimmer);
+        margin-bottom: 6px;
+      }
+
+      .summary-metric-value {
+        font-family: var(--sans);
+        font-size: 18px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        color: var(--text);
+        text-transform: uppercase;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .summary-metric-meta {
+        margin-top: 4px;
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.06em;
+        color: var(--text-dimmer);
+        text-transform: uppercase;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .summary-graph-wrap {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface2);
+        padding: 12px;
+      }
+
+      .summary-graph-wrap.hidden {
+        display: none;
+      }
+
+      .summary-list-wrap.hidden {
+        display: none;
+      }
+
+      .summary-graph-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .summary-graph-row {
+        display: grid;
+        grid-template-columns: minmax(120px, 210px) 1fr auto;
+        gap: 8px;
+        align-items: center;
+        min-height: 20px;
+      }
+
+      .summary-graph-label {
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.05em;
+        color: var(--text-dim);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .summary-graph-track {
+        width: 100%;
+        height: 10px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        overflow: hidden;
+      }
+
+      .summary-graph-fill {
+        height: 100%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--accent), var(--success));
+      }
+
+      .summary-graph-value {
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.05em;
+        color: var(--text-dim);
+        white-space: nowrap;
+      }
+
+      .summary-list-wrap {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface2);
+        overflow: auto;
+        flex: 1;
+        min-height: 130px;
+      }
+
+      .summary-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 620px;
+        font-family: var(--mono);
+        font-size: 11px;
+      }
+
+      .summary-table th,
+      .summary-table td {
+        padding: 10px 10px;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+        vertical-align: top;
+      }
+
+      .summary-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: #1d1d25;
+        color: var(--text-dim);
+        letter-spacing: 0.08em;
+        font-size: 10px;
+        text-transform: uppercase;
+      }
+
+      .summary-table tbody tr:hover {
+        background: rgba(255, 255, 255, 0.03);
+      }
+
+      .summary-rank {
+        display: inline-flex;
+        min-width: 24px;
+        height: 24px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        border: 1px solid var(--border-bright);
+        color: var(--text-dim);
+        font-size: 10px;
+      }
+
+      .summary-model-cell {
+        min-width: 180px;
+      }
+
+      .summary-score-good {
+        color: var(--success);
+      }
+
+      .summary-score-mid {
+        color: var(--warn);
+      }
+
+      .summary-score-bad {
+        color: var(--fail);
+      }
+
+      .summary-comment-cell {
+        min-width: 170px;
+        max-width: 320px;
+        color: var(--text-dim);
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .summary-copy-note {
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--text-dimmer);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .stopwatch-label,
+      .duration-label,
+      .duration-btn,
+      #duration-input,
+      #duration-set-btn,
+      .duration-lock-note,
+      .session-meta-label,
+      .stat-label,
+      .key-hint-item,
+      .key-hint-item kbd,
+      .section-title,
+      .history-tab,
+      .history-tab-count,
+      #history-search,
+      .history-select,
+      .history-utility-btn,
+      .export-btn,
+      .history-selection-note,
+      .session-time-tag,
+      .session-model-tag,
+      .session-group-tag,
+      .session-rank-tag,
+      .session-comment-tag,
+      .session-inline-group,
+      .session-action-btn,
+      .session-collapse-icon,
+      .session-summary-chip,
+      .entry-row,
+      .entry-badge,
+      .entry-timestamp,
+      .session-comment-label,
+      .session-comment-meta,
+      .modal-title,
+      .summary-modal-subtitle,
+      .summary-toolbar-label,
+      .summary-copy-note,
+      .undo-toast-body,
+      #undo-toast-btn,
+      .summary-table,
+      .summary-graph-label,
+      .summary-graph-value,
+      .summary-metric-label,
+      .summary-metric-meta {
+        font-size: 12px;
+      }
+
+      .summary-metric-value {
+        font-size: 20px;
       }
 
       .modal-btns button {
@@ -1483,15 +1837,35 @@
 
       @media (max-width: 930px) {
         .session-card-head {
-          grid-template-columns: auto auto minmax(0, 1fr) auto auto auto;
+          grid-template-columns: auto auto minmax(0, 1fr) auto;
+          align-items: start;
+        }
+
+        .session-inline-group,
+        .session-action-btn {
+          grid-column: 3 / -1;
+          justify-self: start;
+        }
+
+        .session-quick-stats {
+          margin-left: 0;
+          width: 100%;
+          justify-content: flex-start;
         }
 
         .session-collapse-icon {
+          grid-column: 4;
+          grid-row: 1;
           justify-self: end;
+          align-self: center;
         }
       }
 
       @media (max-width: 760px) {
+        .main {
+          padding: 22px 12px 52px;
+        }
+
         .session-meta-grid,
         .eval-area {
           grid-template-columns: 1fr;
@@ -1528,6 +1902,8 @@
         .session-action-btn {
           grid-column: 3 / -1;
           justify-self: start;
+          width: 100%;
+          max-width: none;
         }
 
         .session-collapse-icon {
@@ -1538,7 +1914,52 @@
         }
 
         .session-primary-label {
-          max-width: 170px;
+          max-width: 100%;
+        }
+
+        .session-meta-inner {
+          gap: 6px;
+        }
+
+        .history-list {
+          max-height: min(56vh, 480px);
+          padding-right: 6px;
+        }
+
+        .modal.modal-wide {
+          width: calc(100vw - 16px);
+          max-height: calc(100vh - 16px);
+          padding: 14px;
+        }
+
+        .summary-metrics {
+          grid-template-columns: 1fr;
+        }
+
+        .summary-toolbar-controls {
+          width: 100%;
+        }
+
+        .summary-control {
+          min-width: 0;
+          width: 100%;
+        }
+
+        .summary-view-switch {
+          width: 100%;
+        }
+
+        .summary-view-switch .history-utility-btn {
+          flex: 1;
+        }
+
+        .summary-graph-row {
+          grid-template-columns: 1fr;
+          gap: 4px;
+        }
+
+        .summary-table {
+          min-width: 560px;
         }
 
         .undo-toast {
@@ -1766,6 +2187,14 @@
               </button>
               <button
                 class="history-utility-btn"
+                id="summarize-selected-btn"
+                type="button"
+                disabled
+              >
+                SUMMARIZE
+              </button>
+              <button
+                class="history-utility-btn"
                 id="new-group-btn"
                 type="button"
               >
@@ -1827,6 +2256,112 @@
       </div>
     </div>
 
+    <div class="modal-overlay" id="selection-summary-modal">
+      <div class="modal modal-wide">
+        <div class="modal-title">Selected Summary</div>
+        <div class="summary-modal-toolbar">
+          <div class="summary-modal-subtitle" id="selection-summary-subtitle">
+            SELECT SESSIONS TO GENERATE A SUMMARY
+          </div>
+          <div class="summary-toolbar-controls">
+            <label class="summary-toolbar-label" for="selection-summary-sort">
+              SORT
+            </label>
+            <select
+              class="history-select summary-control"
+              id="selection-summary-sort"
+            >
+              <option value="best">BEST SCORE</option>
+              <option value="recent">MOST RECENT</option>
+              <option value="fastest">FASTEST</option>
+            </select>
+            <label
+              class="summary-toolbar-label"
+              for="selection-summary-graph-metric"
+            >
+              GRAPH
+            </label>
+            <select
+              class="history-select summary-control"
+              id="selection-summary-graph-metric"
+            >
+              <option value="score">SCORE %</option>
+              <option value="rate">THROUGHPUT</option>
+              <option value="total">TOTAL EVALS</option>
+            </select>
+            <div class="summary-view-switch">
+              <button
+                class="history-utility-btn active"
+                id="selection-summary-view-list"
+                type="button"
+              >
+                LIST
+              </button>
+              <button
+                class="history-utility-btn"
+                id="selection-summary-view-chart"
+                type="button"
+              >
+                CHART
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="summary-metrics">
+          <div class="summary-metric-card">
+            <div class="summary-metric-label">BEST</div>
+            <div class="summary-metric-value" id="selection-summary-best">
+              —
+            </div>
+            <div class="summary-metric-meta" id="selection-summary-best-meta">
+              —
+            </div>
+          </div>
+          <div class="summary-metric-card">
+            <div class="summary-metric-label">FASTEST</div>
+            <div class="summary-metric-value" id="selection-summary-fastest">
+              —
+            </div>
+            <div
+              class="summary-metric-meta"
+              id="selection-summary-fastest-meta"
+            >
+              —
+            </div>
+          </div>
+        </div>
+        <div
+          class="summary-graph-wrap hidden"
+          id="selection-summary-graph-wrap"
+        >
+          <div class="summary-graph-list" id="selection-summary-graph"></div>
+        </div>
+        <div class="summary-list-wrap" id="selection-summary-list-wrap">
+          <table class="summary-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Model</th>
+                <th>Success</th>
+                <th>Fail</th>
+                <th>Total</th>
+                <th>Score</th>
+                <th>Comment</th>
+              </tr>
+            </thead>
+            <tbody id="selection-summary-body"></tbody>
+          </table>
+        </div>
+        <div class="summary-copy-note">
+          Copy uses the exact current sort order shown in this modal.
+        </div>
+        <div class="modal-btns">
+          <button id="selection-summary-close">Close</button>
+          <button class="primary" id="selection-summary-copy">Copy</button>
+        </div>
+      </div>
+    </div>
+
     <div class="confirm-modal-overlay" id="erase-modal">
       <div class="confirm-modal">
         <div class="confirm-modal-top">
@@ -1881,6 +2416,7 @@
       const LOCALSTORAGE_ESTIMATED_QUOTA_BYTES = 5 * 1024 * 1024;
       const LOCALSTORAGE_PRUNE_THRESHOLD = 0.8;
       const MIN_STORAGE_BUDGET_BYTES = 64 * 1024;
+      const COMMENT_MAX_LENGTH = 280;
 
       let state = {
         running: false,
@@ -1903,6 +2439,11 @@
       let renameTargetId = null;
       let groupModalMode = "create";
       let groupModalTargetId = null;
+      let summaryClipboardText = "";
+      let summarySortMode = "best";
+      let summaryGraphMetric = "score";
+      let summaryViewMode = "list";
+      let summaryCurrentRows = [];
 
       function sanitizeDuration(seconds) {
         const numeric = Number(seconds);
@@ -1911,6 +2452,12 @@
           MAX_DURATION_SECONDS,
           Math.max(MIN_DURATION_SECONDS, Math.round(numeric)),
         );
+      }
+
+      function sanitizeComment(comment) {
+        return String(comment || "")
+          .slice(0, COMMENT_MAX_LENGTH)
+          .trim();
       }
 
       function cloneSession(session) {
@@ -1930,6 +2477,7 @@
         normalized.model = String(normalized.model || "").trim();
         normalized.title = String(normalized.title || "").trim();
         normalized.groupId = String(normalized.groupId || "").trim();
+        normalized.comment = sanitizeComment(normalized.comment);
         normalized.startedAt = normalized.startedAt || new Date().toISOString();
         normalized.completed = Boolean(normalized.completed);
         normalized.elapsedAtSave = Number.isFinite(
@@ -2303,6 +2851,303 @@
         renderHistory();
       }
 
+      function setSessionComment(id, comment) {
+        const session = getStoredSessionById(id);
+        if (!session) return;
+        const sanitized = sanitizeComment(comment);
+        if (session.comment === sanitized) return;
+        session.comment = sanitized;
+        save();
+      }
+
+      function getSummarySortLabel(mode) {
+        if (mode === "recent") return "MOST RECENT";
+        if (mode === "fastest") return "FASTEST";
+        return "BEST SCORE";
+      }
+
+      function getSelectedSummaryBaseRows() {
+        return getSessionsByIds(state.selectedSessionIds).map((session) => {
+          const summary = getSessionSummary(session);
+          return {
+            session,
+            summary,
+            model: session.model || "",
+            comment: session.comment || "",
+            scoreSort: summary.score === null ? -1 : summary.score,
+          };
+        });
+      }
+
+      function sortSelectionSummaryRows(rows, sortMode = "best") {
+        const sorted = [...rows];
+        if (sortMode === "recent") {
+          sorted.sort((left, right) =>
+            compareByDate(left.session, right.session, "desc"),
+          );
+          return sorted;
+        }
+        if (sortMode === "fastest") {
+          sorted.sort((left, right) => {
+            const rateCmp = compareNumbersDesc(
+              left.summary.ratePerMinute,
+              right.summary.ratePerMinute,
+            );
+            if (rateCmp !== 0) return rateCmp;
+            if (right.summary.total !== left.summary.total)
+              return right.summary.total - left.summary.total;
+            const scoreCmp = compareNumbersDesc(
+              left.scoreSort,
+              right.scoreSort,
+            );
+            if (scoreCmp !== 0) return scoreCmp;
+            return compareByDate(left.session, right.session, "desc");
+          });
+          return sorted;
+        }
+        sorted.sort((left, right) => {
+          const scoreCmp = compareNumbersDesc(left.scoreSort, right.scoreSort);
+          if (scoreCmp !== 0) return scoreCmp;
+          const qualityCmp = compareNumbersDesc(
+            left.summary.qualityConfidence,
+            right.summary.qualityConfidence,
+          );
+          if (qualityCmp !== 0) return qualityCmp;
+          if (right.summary.total !== left.summary.total)
+            return right.summary.total - left.summary.total;
+          return compareByDate(left.session, right.session, "desc");
+        });
+        return sorted;
+      }
+
+      function renderSelectionMetrics(rows) {
+        const bestRow = sortSelectionSummaryRows(rows, "best")[0] || null;
+        const fastestRow = sortSelectionSummaryRows(rows, "fastest")[0] || null;
+
+        const bestName = bestRow ? bestRow.model || "NO MODEL" : "NO DATA";
+        const bestMeta = bestRow
+          ? `SCORE ${bestRow.summary.score === null ? "—" : `${bestRow.summary.score}%`} · TOTAL ${bestRow.summary.total}`
+          : "—";
+        const fastestName = fastestRow
+          ? fastestRow.model || "NO MODEL"
+          : "NO DATA";
+        const fastestMeta = fastestRow
+          ? `RATE ${fastestRow.summary.ratePerMinute.toFixed(2)}/MIN · TOTAL ${fastestRow.summary.total}`
+          : "—";
+
+        document.getElementById("selection-summary-best").textContent =
+          bestName;
+        document.getElementById("selection-summary-best-meta").textContent =
+          bestMeta;
+        document.getElementById("selection-summary-fastest").textContent =
+          fastestName;
+        document.getElementById("selection-summary-fastest-meta").textContent =
+          fastestMeta;
+      }
+
+      function getSummaryGraphMetricConfig() {
+        if (summaryGraphMetric === "rate") {
+          return {
+            label: "THROUGHPUT",
+            value: (row) => row.summary.ratePerMinute,
+            format: (value) => `${value.toFixed(2)}/MIN`,
+          };
+        }
+        if (summaryGraphMetric === "total") {
+          return {
+            label: "TOTAL EVALS",
+            value: (row) => row.summary.total,
+            format: (value) => `${Math.round(value)}`,
+          };
+        }
+        return {
+          label: "SCORE %",
+          value: (row) => (row.summary.score === null ? 0 : row.summary.score),
+          format: (value, row) =>
+            row.summary.score === null ? "—" : `${Math.round(value)}%`,
+        };
+      }
+
+      function renderSelectionGraph(rows) {
+        const graphWrap = document.getElementById(
+          "selection-summary-graph-wrap",
+        );
+        const listWrap = document.getElementById("selection-summary-list-wrap");
+        const graph = document.getElementById("selection-summary-graph");
+        const graphMetricControl = document.getElementById(
+          "selection-summary-graph-metric",
+        );
+        const listViewButton = document.getElementById(
+          "selection-summary-view-list",
+        );
+        const chartViewButton = document.getElementById(
+          "selection-summary-view-chart",
+        );
+        const showChart = summaryViewMode === "chart";
+        graphWrap.classList.toggle("hidden", !showChart);
+        listWrap.classList.toggle("hidden", showChart);
+        listViewButton.classList.toggle("active", !showChart);
+        chartViewButton.classList.toggle("active", showChart);
+        graphMetricControl.disabled = !showChart;
+        if (!showChart) return;
+
+        const metric = getSummaryGraphMetricConfig();
+        const values = rows.map((row) => metric.value(row));
+        const maxValue = Math.max(1, ...values);
+        graph.innerHTML = rows.length
+          ? rows
+              .map((row, index) => {
+                const value = metric.value(row);
+                const width = Math.max(
+                  0,
+                  Math.min(100, (value / maxValue) * 100),
+                );
+                const modelLabel = row.model || "NO MODEL";
+                const fillColor =
+                  summaryGraphMetric === "score" && row.summary.score !== null
+                    ? row.summary.score >= 70
+                      ? "var(--success)"
+                      : row.summary.score >= 40
+                        ? "var(--warn)"
+                        : "var(--fail)"
+                    : "var(--accent)";
+                return `
+                  <div class="summary-graph-row">
+                    <div class="summary-graph-label">#${index + 1} ${escHtml(modelLabel)}</div>
+                    <div class="summary-graph-track">
+                      <div class="summary-graph-fill" style="width:${width}%;background:${fillColor};"></div>
+                    </div>
+                    <div class="summary-graph-value">${metric.format(value, row)}</div>
+                  </div>
+                `;
+              })
+              .join("")
+          : '<div class="summary-graph-value">No data.</div>';
+      }
+
+      function buildSummaryClipboardText(rows) {
+        return rows
+          .map((row, index) => {
+            const cleanedNotes = String(row.comment || "")
+              .replace(/\s+/g, " ")
+              .trim();
+            const score = row.summary.score === null ? "—" : row.summary.score;
+            const lines = [
+              `${index + 1}. Model - ${row.model || "N/A"};`,
+              `Success - ${row.summary.successes}; Fail - ${row.summary.fails}; Total - ${row.summary.total}; Score - ${score}.`,
+            ];
+            if (cleanedNotes) lines.push(`Notes: ${cleanedNotes}`);
+            return lines.join("\n");
+          })
+          .join("\n\n");
+      }
+
+      function renderSelectionSummaryModal(rows) {
+        const body = document.getElementById("selection-summary-body");
+        const subtitle = document.getElementById("selection-summary-subtitle");
+        subtitle.textContent = `${rows.length} selected · sorted by ${getSummarySortLabel(summarySortMode)}`;
+        body.innerHTML = rows
+          .map((row, index) => {
+            const score = row.summary.score;
+            const scoreClass =
+              score === null
+                ? ""
+                : score >= 70
+                  ? "summary-score-good"
+                  : score >= 40
+                    ? "summary-score-mid"
+                    : "summary-score-bad";
+            return `
+              <tr>
+                <td><span class="summary-rank">${index + 1}</span></td>
+                <td class="summary-model-cell">${escHtml(row.model || "NO MODEL")}</td>
+                <td>${row.summary.successes}</td>
+                <td>${row.summary.fails}</td>
+                <td>${row.summary.total}</td>
+                <td class="${scoreClass}">${score === null ? "—" : `${score}%`}</td>
+                <td class="summary-comment-cell">${row.comment ? escHtml(row.comment) : "—"}</td>
+              </tr>
+            `;
+          })
+          .join("");
+      }
+
+      function refreshSelectionSummaryModal() {
+        const baseRows = getSelectedSummaryBaseRows();
+        if (!baseRows.length) {
+          closeSelectionSummaryModal();
+          return;
+        }
+        const sortedRows = sortSelectionSummaryRows(baseRows, summarySortMode);
+        summaryCurrentRows = sortedRows;
+        renderSelectionMetrics(baseRows);
+        renderSelectionSummaryModal(sortedRows);
+        renderSelectionGraph(sortedRows);
+        summaryClipboardText = buildSummaryClipboardText(sortedRows);
+      }
+
+      function updateModalScrollLock() {
+        const hasOpenModal = Boolean(
+          document.querySelector(".modal-overlay.visible") ||
+            document.querySelector(".confirm-modal-overlay.visible"),
+        );
+        document.body.classList.toggle("modal-open", hasOpenModal);
+      }
+
+      function openSelectionSummaryModal() {
+        const baseRows = getSelectedSummaryBaseRows();
+        if (!baseRows.length) return;
+        summaryViewMode = "list";
+        document.getElementById("selection-summary-sort").value =
+          summarySortMode;
+        document.getElementById("selection-summary-graph-metric").value =
+          summaryGraphMetric;
+        document.getElementById("selection-summary-copy").textContent = "Copy";
+        document
+          .getElementById("selection-summary-modal")
+          .classList.add("visible");
+        updateModalScrollLock();
+        refreshSelectionSummaryModal();
+      }
+
+      function closeSelectionSummaryModal() {
+        document
+          .getElementById("selection-summary-modal")
+          .classList.remove("visible");
+        updateModalScrollLock();
+      }
+
+      async function copySelectionSummary() {
+        if (!summaryCurrentRows.length) return;
+        summaryClipboardText = buildSummaryClipboardText(summaryCurrentRows);
+        if (!summaryClipboardText) return;
+        const copyButton = document.getElementById("selection-summary-copy");
+        let copied = false;
+        if (navigator.clipboard && window.isSecureContext) {
+          try {
+            await navigator.clipboard.writeText(summaryClipboardText);
+            copied = true;
+          } catch (error) {
+            copied = false;
+          }
+        }
+        if (!copied) {
+          const fallbackInput = document.createElement("textarea");
+          fallbackInput.value = summaryClipboardText;
+          fallbackInput.setAttribute("readonly", "");
+          fallbackInput.style.position = "fixed";
+          fallbackInput.style.opacity = "0";
+          document.body.appendChild(fallbackInput);
+          fallbackInput.select();
+          copied = document.execCommand("copy");
+          fallbackInput.remove();
+        }
+        copyButton.textContent = copied ? "Copied" : "Copy failed";
+        setTimeout(() => {
+          copyButton.textContent = "Copy";
+        }, 1400);
+      }
+
       function wilsonBound(successes, total, side = "lower") {
         if (!total) return side === "lower" ? 0 : 1;
         const phat = successes / total;
@@ -2449,6 +3294,7 @@
         return [
           session.title || "",
           session.model || "",
+          session.comment || "",
           getGroupName(session.groupId) || "",
         ].some((value) => value.toLowerCase().includes(normalized));
       }
@@ -2538,14 +3384,17 @@
           !state.selectMode || !getFilteredRenderableSessions().length;
         document.getElementById("clear-selection-btn").disabled = !hasSelection;
         document.getElementById("group-selected-btn").disabled = !hasSelection;
+        document.getElementById("summarize-selected-btn").disabled =
+          !hasSelection;
         document.getElementById("history-selection-note").textContent =
           hasSelection
-            ? `${state.selectedSessionIds.length} SELECTED · EXPORTS USE ONLY THE SELECTED ITEMS.`
-            : "EXPORTS FOLLOW YOUR CURRENT FILTERS. IF YOU SELECT ITEMS, EXPORTS USE ONLY THE SELECTED ONES.";
+            ? `${state.selectedSessionIds.length} SELECTED · EXPORTS AND SUMMARY USE ONLY THE SELECTED ITEMS.`
+            : "EXPORTS FOLLOW YOUR CURRENT FILTERS. IF YOU SELECT ITEMS, EXPORTS AND SUMMARY USE ONLY THE SELECTED ONES.";
       }
 
       function clearSelection() {
         state.selectedSessionIds = [];
+        closeSelectionSummaryModal();
       }
 
       function toggleSelectMode() {
@@ -2562,6 +3411,12 @@
         else set.add(id);
         state.selectedSessionIds = [...set];
         updateHistoryControls();
+        if (
+          document
+            .getElementById("selection-summary-modal")
+            .classList.contains("visible")
+        )
+          refreshSelectionSummaryModal();
       }
 
       function selectVisibleSessions() {
@@ -2570,6 +3425,12 @@
         );
         if (state.selectedSessionIds.length) state.selectMode = true;
         updateHistoryControls();
+        if (
+          document
+            .getElementById("selection-summary-modal")
+            .classList.contains("visible")
+        )
+          refreshSelectionSummaryModal();
         renderHistory();
       }
 
@@ -2580,6 +3441,7 @@
         state.selectedSessionIds = state.selectedSessionIds.filter((id) =>
           validIds.has(id),
         );
+        if (!state.selectedSessionIds.length) closeSelectionSummaryModal();
       }
 
       function newSession() {
@@ -2593,6 +3455,7 @@
           model: state.currentModel,
           title: "",
           groupId: "",
+          comment: "",
           startedAt: new Date().toISOString(),
           entries: [],
           completed: false,
@@ -2744,6 +3607,7 @@
       }
 
       function buildEntriesMarkup(session, summary) {
+        const commentValue = session.comment || "";
         const summaryChips = `
     <div class="session-entries-summary">
       <span class="session-summary-chip">QUALITY ${(summary.qualityConfidence * 100).toFixed(1)}%</span>
@@ -2752,6 +3616,18 @@
       <span class="session-summary-chip">RATE ${summary.ratePerMinute.toFixed(2)}/MIN</span>
       <span class="session-summary-chip">DURATION ${formatTime(summary.elapsed)}</span>
       <span class="session-summary-chip">TOTAL ${summary.total}</span>
+    </div>
+  `;
+        const commentMarkup = `
+    <div class="session-comment-wrap">
+      <div class="session-comment-label">Comment (optional)</div>
+      <textarea
+        class="session-comment-input"
+        data-comment="${session.id}"
+        maxlength="${COMMENT_MAX_LENGTH}"
+        placeholder="Add a short note for this session..."
+      >${escHtml(commentValue)}</textarea>
+      <div class="session-comment-meta" data-comment-meta="${session.id}">${commentValue.length}/${COMMENT_MAX_LENGTH}</div>
     </div>
   `;
         const rows = session.entries.length
@@ -2771,7 +3647,7 @@
           !session._active && !session.completed
             ? `<button class="resume-btn" data-resume="${session.id}">▶ RESUME SESSION</button>`
             : "";
-        return `${summaryChips}${rows}${resumeButton}`;
+        return `${summaryChips}${commentMarkup}${rows}${resumeButton}`;
       }
 
       function buildInlineGroupOptions(selectedGroupId) {
@@ -2822,6 +3698,7 @@
         ${session.title ? `<span class="session-time-tag">${summary.startedAt}</span>` : ""}
         ${session.model ? `<span class="session-model-tag">${escHtml(session.model)}</span>` : ""}
         ${groupName ? `<span class="session-group-tag">${escHtml(groupName)}</span>` : ""}
+        ${session.comment ? '<span class="session-comment-tag">COMMENT</span>' : ""}
         <span class="session-time-tag">${formatTime(summary.elapsed)}</span>
         <span class="session-rank-tag">${rankLabel}</span>
         <div class="session-quick-stats">
@@ -2904,6 +3781,24 @@
           resumeButton.addEventListener("click", (event) => {
             event.stopPropagation();
             resumeSession(session.id);
+          });
+        }
+
+        const commentInput = card.querySelector("[data-comment]");
+        const commentMeta = card.querySelector("[data-comment-meta]");
+        if (commentInput) {
+          commentInput.addEventListener("click", (event) =>
+            event.stopPropagation(),
+          );
+          commentInput.addEventListener("keydown", (event) =>
+            event.stopPropagation(),
+          );
+          commentInput.addEventListener("input", (event) => {
+            event.stopPropagation();
+            const value = event.target.value;
+            if (commentMeta)
+              commentMeta.textContent = `${value.length}/${COMMENT_MAX_LENGTH}`;
+            setSessionComment(session.id, value);
           });
         }
 
@@ -3049,6 +3944,7 @@
         document.getElementById("rename-session-input").value =
           session.title || "";
         document.getElementById("rename-modal").classList.add("visible");
+        updateModalScrollLock();
         document.getElementById("rename-session-input").focus();
         document.getElementById("rename-session-input").select();
       }
@@ -3056,6 +3952,7 @@
       function closeRenameModal() {
         renameTargetId = null;
         document.getElementById("rename-modal").classList.remove("visible");
+        updateModalScrollLock();
       }
 
       function commitRenameModal() {
@@ -3118,6 +4015,7 @@
         }
 
         document.getElementById("group-modal").classList.add("visible");
+        updateModalScrollLock();
         if (mode === "create") input.focus();
         else select.focus();
       }
@@ -3125,6 +4023,7 @@
       function closeGroupModal() {
         groupModalTargetId = null;
         document.getElementById("group-modal").classList.remove("visible");
+        updateModalScrollLock();
       }
 
       function getSelectedStoredSessions() {
@@ -3184,11 +4083,13 @@
         document.getElementById("erase-modal-session-name").textContent =
           `${label}${state.currentSession.entries.length ? ` · ${state.currentSession.entries.length} entries` : " · no entries"}`;
         document.getElementById("erase-modal").classList.add("visible");
+        updateModalScrollLock();
         document.getElementById("erase-modal-confirm").focus();
       }
 
       function hideEraseModal() {
         document.getElementById("erase-modal").classList.remove("visible");
+        updateModalScrollLock();
       }
 
       function queueUndo(payload, message) {
@@ -3291,6 +4192,7 @@
             display_label: getSessionLabel(session),
             model: session.model || "",
             group: getGroupName(session.groupId),
+            comment: session.comment || "",
             started_at: session.startedAt || "",
             target_duration_seconds: sanitizeDuration(
               session.targetDuration || state.sessionDuration,
@@ -3481,6 +4383,13 @@
         ) {
           closeGroupModal();
         } else if (
+          event.key === "Escape" &&
+          document
+            .getElementById("selection-summary-modal")
+            .classList.contains("visible")
+        ) {
+          closeSelectionSummaryModal();
+        } else if (
           (event.key === "z" || event.key === "Z") &&
           (event.metaKey || event.ctrlKey) &&
           undoState
@@ -3576,6 +4485,9 @@
         .getElementById("group-selected-btn")
         .addEventListener("click", () => openGroupModal("assign"));
       document
+        .getElementById("summarize-selected-btn")
+        .addEventListener("click", openSelectionSummaryModal);
+      document
         .getElementById("new-group-btn")
         .addEventListener("click", () => openGroupModal("create"));
 
@@ -3630,6 +4542,45 @@
         });
 
       document
+        .getElementById("selection-summary-close")
+        .addEventListener("click", closeSelectionSummaryModal);
+      document
+        .getElementById("selection-summary-copy")
+        .addEventListener("click", copySelectionSummary);
+      document
+        .getElementById("selection-summary-sort")
+        .addEventListener("change", (event) => {
+          summarySortMode = event.target.value;
+          refreshSelectionSummaryModal();
+        });
+      document
+        .getElementById("selection-summary-graph-metric")
+        .addEventListener("change", (event) => {
+          summaryGraphMetric = event.target.value;
+          refreshSelectionSummaryModal();
+        });
+      document
+        .getElementById("selection-summary-view-list")
+        .addEventListener("click", () => {
+          summaryViewMode = "list";
+          refreshSelectionSummaryModal();
+        });
+      document
+        .getElementById("selection-summary-view-chart")
+        .addEventListener("click", () => {
+          summaryViewMode = "chart";
+          refreshSelectionSummaryModal();
+        });
+      document
+        .getElementById("selection-summary-modal")
+        .addEventListener("click", (event) => {
+          if (
+            event.target === document.getElementById("selection-summary-modal")
+          )
+            closeSelectionSummaryModal();
+        });
+
+      document
         .getElementById("undo-toast-btn")
         .addEventListener("click", undoLastRemoval);
 
@@ -3647,6 +4598,7 @@
       updateTitleUI();
       updateModelUI();
       renderHistory();
+      updateModalScrollLock();
       if (state.currentSession) updateButtons(false);
     </script>
   </body>
