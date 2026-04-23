@@ -2206,10 +2206,6 @@
               <button class="export-btn" data-export="json">JSON</button>
             </div>
           </div>
-          <div class="history-selection-note" id="history-selection-note">
-            EXPORTS FOLLOW YOUR CURRENT FILTERS. IF YOU SELECT ITEMS, EXPORTS
-            USE ONLY THE SELECTED ONES.
-          </div>
         </div>
       </div>
 
@@ -2258,7 +2254,7 @@
 
     <div class="modal-overlay" id="selection-summary-modal">
       <div class="modal modal-wide">
-        <div class="modal-title">Selected Summary</div>
+        <div class="modal-title">Summary</div>
         <div class="summary-modal-toolbar">
           <div class="summary-modal-subtitle" id="selection-summary-subtitle">
             SELECT SESSIONS TO GENERATE A SUMMARY
@@ -2737,9 +2733,6 @@
         });
         document.getElementById("duration-input").disabled = locked;
         document.getElementById("duration-set-btn").disabled = locked;
-        document.getElementById("duration-lock-note").textContent = locked
-          ? "DURATION IS LOCKED AFTER A SESSION STARTS. CREATE A NEW SESSION TO CHANGE IT."
-          : "LAST CHOSEN DURATION IS SAVED AND REUSED UNTIL YOU CHANGE IT.";
       }
 
       function setDefaultDuration(seconds) {
@@ -3089,7 +3082,7 @@
       function updateModalScrollLock() {
         const hasOpenModal = Boolean(
           document.querySelector(".modal-overlay.visible") ||
-            document.querySelector(".confirm-modal-overlay.visible"),
+          document.querySelector(".confirm-modal-overlay.visible"),
         );
         document.body.classList.toggle("modal-open", hasOpenModal);
       }
@@ -3386,10 +3379,6 @@
         document.getElementById("group-selected-btn").disabled = !hasSelection;
         document.getElementById("summarize-selected-btn").disabled =
           !hasSelection;
-        document.getElementById("history-selection-note").textContent =
-          hasSelection
-            ? `${state.selectedSessionIds.length} SELECTED · EXPORTS AND SUMMARY USE ONLY THE SELECTED ITEMS.`
-            : "EXPORTS FOLLOW YOUR CURRENT FILTERS. IF YOU SELECT ITEMS, EXPORTS AND SUMMARY USE ONLY THE SELECTED ONES.";
       }
 
       function clearSelection() {
