@@ -29,6 +29,11 @@
         --warn: #ffaa00;
         --blue: #4f7dff;
         --blue-dim: rgba(79, 125, 255, 0.12);
+        --ev-collision: #ff6a3d;
+        --ev-dropped: #c084fc;
+        --ev-phantom: #94a3b8;
+        --ev-shaky: #2dd4bf;
+        --ev-random: #a3e635;
         --mono: "Share Tech Mono", monospace;
         --sans: "Barlow Condensed", sans-serif;
       }
@@ -741,8 +746,8 @@
       }
 
       .history-select,
-      #group-modal-select,
-      #delete-group-select {
+      #ticket-modal-select,
+      #delete-ticket-select {
         min-width: 150px;
         font-family: var(--mono);
         font-size: 11px;
@@ -756,8 +761,8 @@
         outline: none;
       }
 
-      #group-modal-select,
-      #delete-group-select {
+      #ticket-modal-select,
+      #delete-ticket-select {
         width: 100%;
         border-radius: 3px;
         margin-bottom: 12px;
@@ -765,8 +770,8 @@
       }
 
       .history-select:focus,
-      #group-modal-select:focus,
-      #delete-group-select:focus {
+      #ticket-modal-select:focus,
+      #delete-ticket-select:focus {
         border-color: var(--accent);
         box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.08);
       }
@@ -977,7 +982,7 @@
 
       .session-time-tag,
       .session-model-tag,
-      .session-group-tag,
+      .session-ticket-tag,
       .session-rank-tag,
       .session-comment-tag {
         font-family: var(--mono);
@@ -999,7 +1004,7 @@
         border: 1px solid var(--border);
       }
 
-      .session-group-tag {
+      .session-ticket-tag {
         color: var(--warn);
         background: rgba(255, 170, 0, 0.12);
         border: 1px solid rgba(255, 170, 0, 0.22);
@@ -1054,21 +1059,226 @@
         color: var(--blue);
       }
 
-      .color-options {
+      .event-row {
         display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 14px;
+      }
+
+      .event-row-label {
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.2em;
+        color: var(--text-dimmer);
+        text-transform: uppercase;
+        margin-right: 4px;
+      }
+
+      .event-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        padding: 8px 14px;
+        border-radius: 999px;
+        border: 1px solid var(--border-bright);
+        background: var(--surface2);
+        color: var(--text-dim);
+        cursor: pointer;
+        transition: all 0.15s;
+        user-select: none;
+      }
+
+      .event-btn kbd {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-bright);
+        border-radius: 3px;
+        padding: 1px 6px;
+        font-size: 10px;
+      }
+
+      .event-btn:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+      }
+
+      @keyframes eventFlash {
+        0% {
+          transform: scale(1.08);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+
+      .event-btn.flash-event {
+        animation: eventFlash 0.22s ease-out;
+      }
+
+      .event-btn.event-collision:not(:disabled):hover,
+      .event-btn.event-collision.flash-event {
+        border-color: var(--ev-collision);
+        color: var(--ev-collision);
+        background: rgba(255, 106, 61, 0.12);
+      }
+      .event-btn.event-dropped:not(:disabled):hover,
+      .event-btn.event-dropped.flash-event {
+        border-color: var(--ev-dropped);
+        color: var(--ev-dropped);
+        background: rgba(192, 132, 252, 0.12);
+      }
+      .event-btn.event-phantom:not(:disabled):hover,
+      .event-btn.event-phantom.flash-event {
+        border-color: var(--ev-phantom);
+        color: var(--ev-phantom);
+        background: rgba(148, 163, 184, 0.12);
+      }
+      .event-btn.event-shaky:not(:disabled):hover,
+      .event-btn.event-shaky.flash-event {
+        border-color: var(--ev-shaky);
+        color: var(--ev-shaky);
+        background: rgba(45, 212, 191, 0.12);
+      }
+      .event-btn.event-random:not(:disabled):hover,
+      .event-btn.event-random.flash-event {
+        border-color: var(--ev-random);
+        color: var(--ev-random);
+        background: rgba(163, 230, 53, 0.12);
+      }
+
+      .event-dot-tag {
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.05em;
+        padding: 2px 8px;
+        border-radius: 999px;
+        border: 1px solid var(--border-bright);
+        white-space: nowrap;
+        display: inline-block;
+        text-transform: uppercase;
+      }
+
+      .event-dot-tag.event-collision {
+        color: var(--ev-collision);
+        border-color: rgba(255, 106, 61, 0.45);
+        background: rgba(255, 106, 61, 0.1);
+      }
+      .event-dot-tag.event-dropped {
+        color: var(--ev-dropped);
+        border-color: rgba(192, 132, 252, 0.45);
+        background: rgba(192, 132, 252, 0.1);
+      }
+      .event-dot-tag.event-phantom {
+        color: var(--ev-phantom);
+        border-color: rgba(148, 163, 184, 0.45);
+        background: rgba(148, 163, 184, 0.1);
+      }
+      .event-dot-tag.event-shaky {
+        color: var(--ev-shaky);
+        border-color: rgba(45, 212, 191, 0.45);
+        background: rgba(45, 212, 191, 0.1);
+      }
+      .event-dot-tag.event-random {
+        color: var(--ev-random);
+        border-color: rgba(163, 230, 53, 0.45);
+        background: rgba(163, 230, 53, 0.1);
+      }
+
+      .session-event-tags {
+        display: inline-flex;
+        gap: 4px;
+        flex-wrap: wrap;
+      }
+
+      .entry-row.ev {
+        border-left: 2px solid var(--text-dimmer);
+      }
+      .entry-row.ev .entry-badge {
+        text-transform: uppercase;
+      }
+      .entry-row.ev.event-collision {
+        border-left-color: var(--ev-collision);
+      }
+      .entry-row.ev.event-collision .entry-badge {
+        color: var(--ev-collision);
+        background: rgba(255, 106, 61, 0.12);
+      }
+      .entry-row.ev.event-dropped {
+        border-left-color: var(--ev-dropped);
+      }
+      .entry-row.ev.event-dropped .entry-badge {
+        color: var(--ev-dropped);
+        background: rgba(192, 132, 252, 0.12);
+      }
+      .entry-row.ev.event-phantom {
+        border-left-color: var(--ev-phantom);
+      }
+      .entry-row.ev.event-phantom .entry-badge {
+        color: var(--ev-phantom);
+        background: rgba(148, 163, 184, 0.12);
+      }
+      .entry-row.ev.event-shaky {
+        border-left-color: var(--ev-shaky);
+      }
+      .entry-row.ev.event-shaky .entry-badge {
+        color: var(--ev-shaky);
+        background: rgba(45, 212, 191, 0.12);
+      }
+      .entry-row.ev.event-random {
+        border-left-color: var(--ev-random);
+      }
+      .entry-row.ev.event-random .entry-badge {
+        color: var(--ev-random);
+        background: rgba(163, 230, 53, 0.12);
+      }
+
+      .color-select-row {
+        display: none;
+        align-items: center;
+        justify-content: center;
         gap: 10px;
-        margin-bottom: 16px;
+        flex-wrap: wrap;
+        margin: -8px 0 20px;
+      }
+
+      .color-select-row.visible {
+        display: flex;
+        animation: colorRowIn 0.18s ease-out;
+      }
+
+      @keyframes colorRowIn {
+        from {
+          opacity: 0;
+          transform: translateY(-6px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .color-select-label {
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.2em;
+        color: var(--text-dimmer);
+        text-transform: uppercase;
       }
 
       .color-option-btn {
-        flex: 1;
         font-family: var(--sans);
         font-weight: 900;
-        font-size: 15px;
+        font-size: 13px;
         letter-spacing: 0.12em;
         text-transform: uppercase;
-        padding: 22px 8px;
-        border-radius: 4px;
+        padding: 10px 26px;
+        border-radius: 999px;
         cursor: pointer;
         background: var(--surface2);
         transition: all 0.15s;
@@ -1166,7 +1376,7 @@
         color: var(--fail);
       }
 
-      .session-inline-group {
+      .session-inline-ticket {
         min-width: 126px;
         max-width: 150px;
         font-family: var(--mono);
@@ -1182,8 +1392,8 @@
         outline: none;
       }
 
-      .session-inline-group:hover,
-      .session-inline-group:focus {
+      .session-inline-ticket:hover,
+      .session-inline-ticket:focus {
         border-color: var(--accent);
         color: var(--accent);
         box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.08);
@@ -1631,6 +1841,22 @@
         background: rgba(255, 255, 255, 0.03);
       }
 
+      .summary-table th.sortable {
+        cursor: pointer;
+        user-select: none;
+        white-space: nowrap;
+        transition: color 0.15s;
+      }
+
+      .summary-table th.sortable:hover,
+      .summary-table th.sorted {
+        color: var(--accent);
+      }
+
+      .sort-arrow {
+        font-size: 8px;
+      }
+
       .summary-rank {
         display: inline-flex;
         min-width: 24px;
@@ -1695,10 +1921,10 @@
       .history-selection-note,
       .session-time-tag,
       .session-model-tag,
-      .session-group-tag,
+      .session-ticket-tag,
       .session-rank-tag,
       .session-comment-tag,
-      .session-inline-group,
+      .session-inline-ticket,
       .session-action-btn,
       .session-collapse-icon,
       .session-summary-chip,
@@ -1967,7 +2193,7 @@
           align-items: start;
         }
 
-        .session-inline-group,
+        .session-inline-ticket,
         .session-action-btn {
           grid-column: 3 / -1;
           justify-self: start;
@@ -2024,7 +2250,7 @@
           align-items: start;
         }
 
-        .session-inline-group,
+        .session-inline-ticket,
         .session-action-btn {
           grid-column: 3 / -1;
           justify-self: start;
@@ -2204,6 +2430,38 @@
         <button class="ctrl-btn new-btn" id="btn-new">+ NEW SESSION</button>
       </div>
 
+      <div class="color-select-row" id="color-select-row">
+        <span class="color-select-label">SELECT COLOR</span>
+        <button
+          class="color-option-btn red"
+          data-session-color="red"
+          type="button"
+        >
+          RED
+        </button>
+        <button
+          class="color-option-btn yellow"
+          data-session-color="yellow"
+          type="button"
+        >
+          YELLOW
+        </button>
+        <button
+          class="color-option-btn blue"
+          data-session-color="blue"
+          type="button"
+        >
+          BLUE
+        </button>
+        <button
+          class="history-utility-btn"
+          id="color-select-cancel"
+          type="button"
+        >
+          ✕ CANCEL
+        </button>
+      </div>
+
       <div class="eval-area">
         <button class="verdict-btn" id="btn-fail" disabled>
           ✕ FAIL
@@ -2240,6 +2498,8 @@
         <div class="key-hint-item"><kbd>→</kbd> SUCCESS</div>
       </div>
 
+      <div class="event-row" id="event-row"></div>
+
       <div class="section-head history-head">
         <span class="section-title">Session History</span>
         <div class="history-controls">
@@ -2266,9 +2526,9 @@
               autocomplete="off"
               maxlength="80"
             />
-            <select class="history-select" id="history-group-filter">
-              <option value="all">ALL GROUPS</option>
-              <option value="ungrouped">UNGROUPED</option>
+            <select class="history-select" id="history-ticket-filter">
+              <option value="all">ALL TICKETS</option>
+              <option value="ungrouped">NO TICKET</option>
             </select>
             <select class="history-select" id="history-sort">
               <option value="newest">RECENT FIRST</option>
@@ -2305,11 +2565,11 @@
               </button>
               <button
                 class="history-utility-btn"
-                id="group-selected-btn"
+                id="assign-ticket-btn"
                 type="button"
                 disabled
               >
-                GROUP SELECTED
+                ADD TO TICKET
               </button>
               <button
                 class="history-utility-btn"
@@ -2329,17 +2589,17 @@
               </button>
               <button
                 class="history-utility-btn"
-                id="new-group-btn"
+                id="new-ticket-btn"
                 type="button"
               >
-                NEW GROUP
+                NEW TICKET
               </button>
               <button
                 class="history-utility-btn danger"
-                id="delete-group-btn"
+                id="delete-ticket-btn"
                 type="button"
               >
-                DELETE GROUP
+                DELETE TICKET
               </button>
             </div>
             <div class="export-group">
@@ -2372,23 +2632,30 @@
       </div>
     </div>
 
-    <div class="modal-overlay" id="group-modal">
+    <div class="modal-overlay" id="ticket-modal">
       <div class="modal">
-        <div class="modal-title" id="group-modal-title">Group Sessions</div>
-        <select id="group-modal-select">
-          <option value="">SELECT A GROUP</option>
-          <option value="ungrouped">NO GROUP</option>
+        <div class="modal-title" id="ticket-modal-title">Ticket Sessions</div>
+        <select id="ticket-modal-select">
+          <option value="">SELECT A TICKET</option>
+          <option value="ungrouped">NO TICKET</option>
         </select>
         <input
           type="text"
-          id="group-modal-input"
-          placeholder="OR CREATE NEW GROUP"
+          id="ticket-modal-input"
+          placeholder="OR CREATE NEW TICKET"
           maxlength="60"
           autocomplete="off"
         />
+        <input
+          type="text"
+          id="ticket-modal-operators"
+          placeholder="OPERATORS (COMMA SEPARATED)"
+          maxlength="200"
+          autocomplete="off"
+        />
         <div class="modal-btns">
-          <button id="group-modal-cancel">Cancel</button>
-          <button class="primary" id="group-modal-confirm">Apply</button>
+          <button id="ticket-modal-cancel">Cancel</button>
+          <button class="primary" id="ticket-modal-confirm">Apply</button>
         </div>
       </div>
     </div>
@@ -2403,52 +2670,20 @@
           <div class="summary-toolbar-controls">
             <label
               class="summary-toolbar-label"
-              for="selection-summary-sort"
-              id="selection-summary-sort-label"
-            >
-              SORT
-            </label>
-            <select
-              class="history-select summary-control"
-              id="selection-summary-sort"
-            >
-              <option value="best">BEST SCORE</option>
-              <option value="recent">MOST RECENT</option>
-              <option value="fastest">FASTEST</option>
-            </select>
-            <label
-              class="summary-toolbar-label"
               for="selection-summary-graph-metric"
               id="selection-summary-graph-metric-label"
+              style="display: none"
             >
               GRAPH
             </label>
             <select
               class="history-select summary-control"
               id="selection-summary-graph-metric"
+              style="display: none"
             >
               <option value="score">SCORE %</option>
               <option value="rate">THROUGHPUT</option>
               <option value="total">TOTAL EVALS</option>
-            </select>
-            <label
-              class="summary-toolbar-label"
-              for="selection-summary-model-sort"
-              id="selection-summary-model-sort-label"
-              style="display: none"
-            >
-              RANK BY
-            </label>
-            <select
-              class="history-select summary-control"
-              id="selection-summary-model-sort"
-              style="display: none"
-            >
-              <option value="confidence">OVERALL (CONFIDENCE)</option>
-              <option value="raw">OVERALL (RAW AVG)</option>
-              <option value="red">RED AVG</option>
-              <option value="yellow">YELLOW AVG</option>
-              <option value="blue">BLUE AVG</option>
             </select>
             <div class="summary-view-switch">
               <button
@@ -2509,12 +2744,30 @@
             <thead>
               <tr>
                 <th>#</th>
-                <th>Model</th>
-                <th>Color</th>
-                <th>Success</th>
-                <th>Fail</th>
-                <th>Total</th>
-                <th>Score</th>
+                <th class="sortable" data-table="sessions" data-sort="model">
+                  Model<span class="sort-arrow"></span>
+                </th>
+                <th class="sortable" data-table="sessions" data-sort="color">
+                  Color<span class="sort-arrow"></span>
+                </th>
+                <th class="sortable" data-table="sessions" data-sort="success">
+                  Success<span class="sort-arrow"></span>
+                </th>
+                <th class="sortable" data-table="sessions" data-sort="fail">
+                  Fail<span class="sort-arrow"></span>
+                </th>
+                <th class="sortable" data-table="sessions" data-sort="total">
+                  Total<span class="sort-arrow"></span>
+                </th>
+                <th class="sortable" data-table="sessions" data-sort="score">
+                  Score<span class="sort-arrow"></span>
+                </th>
+                <th class="sortable" data-table="sessions" data-sort="rate">
+                  Rate<span class="sort-arrow"></span>
+                </th>
+                <th class="sortable" data-table="sessions" data-sort="events">
+                  Events<span class="sort-arrow"></span>
+                </th>
                 <th>Comment</th>
               </tr>
             </thead>
@@ -2529,21 +2782,45 @@
             <thead>
               <tr>
                 <th>#</th>
-                <th>Model</th>
-                <th>Red</th>
-                <th>Yellow</th>
-                <th>Blue</th>
-                <th>Overall Avg</th>
-                <th>Confidence</th>
-                <th>Sessions</th>
-                <th>Evals</th>
+                <th class="sortable" data-table="models" data-sort="model">
+                  Model<span class="sort-arrow"></span>
+                </th>
+                <th class="sortable" data-table="models" data-sort="red">
+                  Red<span class="sort-arrow"></span>
+                </th>
+                <th class="sortable" data-table="models" data-sort="yellow">
+                  Yellow<span class="sort-arrow"></span>
+                </th>
+                <th class="sortable" data-table="models" data-sort="blue">
+                  Blue<span class="sort-arrow"></span>
+                </th>
+                <th class="sortable" data-table="models" data-sort="overall">
+                  Overall Avg<span class="sort-arrow"></span>
+                </th>
+                <th
+                  class="sortable"
+                  data-table="models"
+                  data-sort="confidence"
+                >
+                  Confidence<span class="sort-arrow"></span>
+                </th>
+                <th class="sortable" data-table="models" data-sort="events">
+                  Events<span class="sort-arrow"></span>
+                </th>
+                <th class="sortable" data-table="models" data-sort="sessions">
+                  Sessions<span class="sort-arrow"></span>
+                </th>
+                <th class="sortable" data-table="models" data-sort="evals">
+                  Evals<span class="sort-arrow"></span>
+                </th>
               </tr>
             </thead>
             <tbody id="selection-summary-models-body"></tbody>
           </table>
         </div>
         <div class="summary-copy-note">
-          Copy uses the exact current sort order shown in this modal.
+          Click a column header to sort. Copy follows the current view and
+          sort order.
         </div>
         <div class="modal-btns">
           <button id="selection-summary-close">Close</button>
@@ -2552,36 +2829,16 @@
       </div>
     </div>
 
-    <div class="modal-overlay" id="new-session-modal">
+    <div class="modal-overlay" id="delete-ticket-modal">
       <div class="modal">
-        <div class="modal-title">New Session · Pick a Color</div>
-        <div class="color-options">
-          <button class="color-option-btn red" data-session-color="red" type="button">
-            RED
-          </button>
-          <button class="color-option-btn yellow" data-session-color="yellow" type="button">
-            YELLOW
-          </button>
-          <button class="color-option-btn blue" data-session-color="blue" type="button">
-            BLUE
-          </button>
+        <div class="modal-title">Delete Ticket</div>
+        <select id="delete-ticket-select"></select>
+        <div class="modal-note" id="delete-ticket-note">
+          Only empty tickets can be deleted.
         </div>
         <div class="modal-btns">
-          <button id="new-session-cancel">Cancel</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="modal-overlay" id="delete-group-modal">
-      <div class="modal">
-        <div class="modal-title">Delete Group</div>
-        <select id="delete-group-select"></select>
-        <div class="modal-note" id="delete-group-note">
-          Only empty groups can be deleted.
-        </div>
-        <div class="modal-btns">
-          <button id="delete-group-cancel">Cancel</button>
-          <button class="primary" id="delete-group-confirm" disabled>
+          <button id="delete-ticket-cancel">Cancel</button>
+          <button class="primary" id="delete-ticket-confirm" disabled>
             Delete
           </button>
         </div>
@@ -2596,9 +2853,7 @@
           <div class="confirm-modal-body">
             This will delete all selected sessions. You can undo for a few
             seconds afterwards.
-            <span
-              class="confirm-modal-session-name"
-              id="delete-selected-count"
+            <span class="confirm-modal-session-name" id="delete-selected-count"
               >—</span
             >
           </div>
@@ -2657,10 +2912,19 @@
       const UNLIMITED_DURATION = 0;
       const DURATION_PRESETS = [300, 600, 900, UNLIMITED_DURATION];
       const SESSION_COLORS = ["red", "yellow", "blue"];
+      const EVENT_TYPES = [
+        { id: "collision", label: "Collision", key: "c" },
+        { id: "dropped", label: "Dropped", key: "d" },
+        { id: "phantom", label: "Phantom", key: "p" },
+        { id: "shaky", label: "Shaky", key: "s" },
+        { id: "random", label: "Random", key: "r" },
+      ];
+      const EVENT_IDS = EVENT_TYPES.map((type) => type.id);
       const MIN_DURATION_SECONDS = 60;
       const MAX_DURATION_SECONDS = 3 * 60 * 60;
-      const STORAGE_KEY = "robot_eval_v5";
+      const STORAGE_KEY = "robot_eval_v6";
       const FALLBACK_STORAGE_KEYS = [
+        "robot_eval_v5",
         "robot_eval_v4",
         "robot_eval_v3",
         "robot_eval_v2",
@@ -2681,25 +2945,26 @@
         sessionDuration: DEFAULT_SESSION_DURATION,
         historyFilter: "all",
         historyQuery: "",
-        historyGroupFilter: "all",
+        historyTicketFilter: "all",
         historySort: "newest",
         selectMode: false,
         selectedSessionIds: [],
-        groups: [],
+        tickets: [],
       };
 
       let timerInterval = null;
       let undoState = null;
       let renameTargetId = null;
-      let groupModalMode = "create";
-      let groupModalTargetId = null;
+      let ticketModalMode = "create";
+      let ticketModalTargetId = null;
       let summaryClipboardText = "";
-      let summarySortMode = "best";
       let summaryGraphMetric = "score";
       let summaryViewMode = "list";
       let summaryCurrentRows = [];
       let summaryModelRows = [];
-      let summaryModelSort = "confidence";
+      let summarySessionSort = { key: "score", dir: "desc" };
+      let summaryModelSort = { key: "confidence", dir: "desc" };
+      const SUMMARY_ASC_DEFAULT_KEYS = new Set(["model", "color", "events"]);
 
       function sanitizeDuration(seconds) {
         const numeric = Number(seconds);
@@ -2733,7 +2998,10 @@
           `${Date.now()}_${Math.random().toString(16).slice(2, 8)}`;
         normalized.model = String(normalized.model || "").trim();
         normalized.title = String(normalized.title || "").trim();
-        normalized.groupId = String(normalized.groupId || "").trim();
+        normalized.ticketId = String(
+          normalized.ticketId || normalized.groupId || "",
+        ).trim();
+        delete normalized.groupId;
         normalized.color = SESSION_COLORS.includes(normalized.color)
           ? normalized.color
           : "";
@@ -2754,22 +3022,45 @@
                   : state.sessionDuration || DEFAULT_SESSION_DURATION),
         );
         normalized.entries = Array.isArray(normalized.entries)
-          ? normalized.entries.map((entry) => ({
-              type: entry.type === "fail" ? "fail" : "success",
-              ts: String(entry.ts || "00:00"),
-            }))
+          ? normalized.entries.map((entry) => {
+              if (entry.type === "event") {
+                return {
+                  type: "event",
+                  name: EVENT_IDS.includes(entry.name) ? entry.name : "random",
+                  ts: String(entry.ts || "00:00"),
+                };
+              }
+              return {
+                type: entry.type === "fail" ? "fail" : "success",
+                ts: String(entry.ts || "00:00"),
+              };
+            })
           : [];
         return normalized;
       }
 
-      function normalizeGroup(group) {
+      function parseOperators(raw) {
+        return [
+          ...new Set(
+            String(raw || "")
+              .split(",")
+              .map((name) => name.trim())
+              .filter(Boolean),
+          ),
+        ].slice(0, 20);
+      }
+
+      function normalizeTicket(ticket) {
         return {
           id: String(
-            group.id ||
+            ticket.id ||
               `${Date.now()}_${Math.random().toString(16).slice(2, 8)}`,
           ),
-          name: String(group.name || "").trim(),
-          createdAt: group.createdAt || new Date().toISOString(),
+          name: String(ticket.name || "").trim(),
+          operators: Array.isArray(ticket.operators)
+            ? parseOperators(ticket.operators.join(","))
+            : [],
+          createdAt: ticket.createdAt || new Date().toISOString(),
         };
       }
 
@@ -2782,9 +3073,9 @@
           sessionDuration: state.sessionDuration,
           historyFilter: state.historyFilter,
           historyQuery: state.historyQuery,
-          historyGroupFilter: state.historyGroupFilter,
+          historyTicketFilter: state.historyTicketFilter,
           historySort: state.historySort,
-          groups: state.groups,
+          tickets: state.tickets,
         };
       }
 
@@ -2943,22 +3234,28 @@
           state.currentModel = String(parsed.currentModel || "").trim();
           state.historyFilter = parsed.historyFilter || "all";
           state.historyQuery = parsed.historyQuery || "";
-          state.historyGroupFilter = parsed.historyGroupFilter || "all";
+          state.historyTicketFilter =
+            parsed.historyTicketFilter || parsed.historyGroupFilter || "all";
           state.historySort = parsed.historySort || "newest";
-          state.groups = Array.isArray(parsed.groups)
-            ? parsed.groups.map(normalizeGroup).filter((group) => group.name)
-            : [];
+          const storedTickets = Array.isArray(parsed.tickets)
+            ? parsed.tickets
+            : Array.isArray(parsed.groups)
+              ? parsed.groups
+              : [];
+          state.tickets = storedTickets
+            .map(normalizeTicket)
+            .filter((ticket) => ticket.name);
           state.running = false;
-          dedupeGroups();
-          syncGroupsFromSessions();
+          dedupeTickets();
+          syncTicketsFromSessions();
         } catch (error) {
           console.warn("Load error", error);
         }
       }
 
-      function dedupeGroups() {
+      function dedupeTickets() {
         const seen = new Set();
-        state.groups = state.groups.filter((group) => {
+        state.tickets = state.tickets.filter((group) => {
           const key = group.name.trim().toLowerCase();
           if (!key || seen.has(key)) return false;
           seen.add(key);
@@ -2966,16 +3263,16 @@
         });
       }
 
-      function syncGroupsFromSessions() {
+      function syncTicketsFromSessions() {
         const allSessions = [];
         if (state.currentSession) allSessions.push(state.currentSession);
         allSessions.push(...state.sessions);
         allSessions.forEach((session) => {
-          if (!session.groupId) return;
-          const group = state.groups.find(
-            (item) => item.id === session.groupId,
+          if (!session.ticketId) return;
+          const group = state.tickets.find(
+            (item) => item.id === session.ticketId,
           );
-          if (!group) session.groupId = "";
+          if (!group) session.ticketId = "";
         });
       }
 
@@ -3112,22 +3409,26 @@
         return "UNTITLED SESSION";
       }
 
-      function getGroupName(groupId) {
-        if (!groupId) return "";
-        const group = state.groups.find((item) => item.id === groupId);
-        return group ? group.name : "";
+      function getTicketById(ticketId) {
+        if (!ticketId) return null;
+        return state.tickets.find((item) => item.id === ticketId) || null;
       }
 
-      function ensureGroup(name) {
+      function getTicketName(ticketId) {
+        const ticket = getTicketById(ticketId);
+        return ticket ? ticket.name : "";
+      }
+
+      function ensureTicket(name) {
         const cleaned = String(name || "").trim();
         if (!cleaned) return "";
-        const existing = state.groups.find(
+        const existing = state.tickets.find(
           (group) => group.name.toLowerCase() === cleaned.toLowerCase(),
         );
         if (existing) return existing.id;
-        const group = normalizeGroup({ name: cleaned });
-        state.groups.push(group);
-        state.groups.sort((a, b) => a.name.localeCompare(b.name));
+        const group = normalizeTicket({ name: cleaned });
+        state.tickets.push(group);
+        state.tickets.sort((a, b) => a.name.localeCompare(b.name));
         return group.id;
       }
 
@@ -3137,10 +3438,10 @@
         return state.sessions.find((session) => session.id === id) || null;
       }
 
-      function setSessionGroup(id, groupId) {
+      function setSessionTicket(id, ticketId) {
         const session = getStoredSessionById(id);
         if (!session) return;
-        session.groupId = groupId;
+        session.ticketId = ticketId;
         save();
         renderHistory();
       }
@@ -3154,20 +3455,6 @@
         save();
       }
 
-      function getSummarySortLabel(mode) {
-        if (mode === "recent") return "MOST RECENT";
-        if (mode === "fastest") return "FASTEST";
-        return "BEST SCORE";
-      }
-
-      function getModelSortLabel(mode) {
-        if (mode === "raw") return "OVERALL (RAW AVG)";
-        if (mode === "red") return "RED AVG";
-        if (mode === "yellow") return "YELLOW AVG";
-        if (mode === "blue") return "BLUE AVG";
-        return "OVERALL (CONFIDENCE)";
-      }
-
       function getScoreClass(score) {
         if (score === null) return "";
         if (score >= 70) return "summary-score-good";
@@ -3175,8 +3462,14 @@
         return "summary-score-bad";
       }
 
-      function getSelectedSummaryBaseRows() {
-        return getSessionsByIds(state.selectedSessionIds).map((session) => {
+      function getSummaryTargetSessions() {
+        if (state.selectedSessionIds.length)
+          return getSessionsByIds(state.selectedSessionIds);
+        return getFilteredRenderableSessions();
+      }
+
+      function getSummaryBaseRows() {
+        return getSummaryTargetSessions().map((session) => {
           const summary = getSessionSummary(session);
           return {
             session,
@@ -3298,27 +3591,106 @@
         document
           .getElementById("selection-summary-view-models")
           .classList.toggle("active", showModels);
-        document.getElementById("selection-summary-graph-metric").disabled =
-          !showChart;
-        const sessionControlsDisplay = showModels ? "none" : "";
-        document.getElementById(
-          "selection-summary-sort-label",
-        ).style.display = sessionControlsDisplay;
-        document.getElementById("selection-summary-sort").style.display =
-          sessionControlsDisplay;
+        const graphControlsDisplay = showChart ? "" : "none";
         document.getElementById(
           "selection-summary-graph-metric-label",
-        ).style.display = sessionControlsDisplay;
+        ).style.display = graphControlsDisplay;
         document.getElementById(
           "selection-summary-graph-metric",
-        ).style.display = sessionControlsDisplay;
-        const modelControlsDisplay = showModels ? "" : "none";
-        document.getElementById(
-          "selection-summary-model-sort-label",
-        ).style.display = modelControlsDisplay;
-        document.getElementById(
-          "selection-summary-model-sort",
-        ).style.display = modelControlsDisplay;
+        ).style.display = graphControlsDisplay;
+      }
+
+      function updateSummarySortIndicators() {
+        document.querySelectorAll(".summary-table th.sortable").forEach((th) => {
+          const sortState =
+            th.dataset.table === "models" ? summaryModelSort : summarySessionSort;
+          const active = sortState.key === th.dataset.sort;
+          th.classList.toggle("sorted", active);
+          th.querySelector(".sort-arrow").textContent = active
+            ? sortState.dir === "desc"
+              ? " ▼"
+              : " ▲"
+            : "";
+        });
+      }
+
+      function handleSummaryHeaderClick(table, key) {
+        const sortState =
+          table === "models" ? summaryModelSort : summarySessionSort;
+        if (sortState.key === key) {
+          sortState.dir = sortState.dir === "desc" ? "asc" : "desc";
+        } else {
+          sortState.key = key;
+          sortState.dir = SUMMARY_ASC_DEFAULT_KEYS.has(key) ? "asc" : "desc";
+        }
+        refreshSelectionSummaryModal();
+      }
+
+      function getSessionSortValue(row, key) {
+        switch (key) {
+          case "model":
+            return (row.model || "").toLowerCase() || null;
+          case "color": {
+            const index = SESSION_COLORS.indexOf(row.session.color);
+            return index === -1 ? null : index;
+          }
+          case "success":
+            return row.summary.successes;
+          case "fail":
+            return row.summary.fails;
+          case "total":
+            return row.summary.total;
+          case "score":
+            return row.summary.score;
+          case "rate":
+            return row.summary.ratePerMinute;
+          case "events":
+            return row.summary.totalEvents;
+          default:
+            return null;
+        }
+      }
+
+      function getModelSortValue(row, key) {
+        switch (key) {
+          case "model":
+            return row.model.toLowerCase();
+          case "red":
+          case "yellow":
+          case "blue":
+            return row.colors[key].avg;
+          case "overall":
+            return row.overallRaw;
+          case "confidence":
+            return row.overallConfidence;
+          case "events":
+            return row.totalEvents;
+          case "sessions":
+            return row.sessions;
+          case "evals":
+            return row.totalEvals;
+          default:
+            return null;
+        }
+      }
+
+      function sortRowsBy(rows, getValue, sortState, tiebreak) {
+        const mul = sortState.dir === "asc" ? 1 : -1;
+        return [...rows].sort((a, b) => {
+          const aValue = getValue(a, sortState.key);
+          const bValue = getValue(b, sortState.key);
+          const aNull = aValue === null || aValue === undefined;
+          const bNull = bValue === null || bValue === undefined;
+          if (aNull && bNull) return tiebreak ? tiebreak(a, b) : 0;
+          if (aNull) return 1;
+          if (bNull) return -1;
+          let cmp = 0;
+          if (typeof aValue === "string" || typeof bValue === "string")
+            cmp = String(aValue).localeCompare(String(bValue));
+          else cmp = aValue - bValue;
+          if (cmp !== 0) return cmp * mul;
+          return tiebreak ? tiebreak(a, b) : 0;
+        });
       }
 
       function renderSelectionGraph(rows) {
@@ -3370,6 +3742,10 @@
               sessions: 0,
               totalEvals: 0,
               uncolored: 0,
+              eventCounts: {},
+              totalEvents: 0,
+              comments: [],
+              operators: [],
               colors: Object.fromEntries(
                 SESSION_COLORS.map((color) => [
                   color,
@@ -3381,6 +3757,20 @@
           const entry = map.get(key);
           entry.sessions += 1;
           entry.totalEvals += row.summary.total;
+          Object.entries(row.summary.eventCounts).forEach(([name, count]) => {
+            entry.eventCounts[name] = (entry.eventCounts[name] || 0) + count;
+            entry.totalEvents += count;
+          });
+          const rowComment = (row.comment || "").trim();
+          if (rowComment && !entry.comments.includes(rowComment))
+            entry.comments.push(rowComment);
+          const rowTicket = getTicketById(row.session.ticketId);
+          if (rowTicket) {
+            rowTicket.operators.forEach((operator) => {
+              if (!entry.operators.includes(operator))
+                entry.operators.push(operator);
+            });
+          }
           const color = row.session.color;
           if (color && entry.colors[color]) {
             const colorStats = entry.colors[color];
@@ -3422,50 +3812,6 @@
         });
       }
 
-      function sortModelComparisonRows(rows, mode) {
-        const sorted = [...rows];
-        if (SESSION_COLORS.includes(mode)) {
-          sorted.sort((a, b) => {
-            const aAvg = a.colors[mode].avg;
-            const bAvg = b.colors[mode].avg;
-            if (aAvg === null && bAvg === null)
-              return b.overallConfidence - a.overallConfidence;
-            if (aAvg === null) return 1;
-            if (bAvg === null) return -1;
-            const avgCmp = compareNumbersDesc(aAvg, bAvg);
-            if (avgCmp !== 0) return avgCmp;
-            const wilsonCmp = compareNumbersDesc(
-              a.colors[mode].wilson,
-              b.colors[mode].wilson,
-            );
-            if (wilsonCmp !== 0) return wilsonCmp;
-            return b.colors[mode].total - a.colors[mode].total;
-          });
-          return sorted;
-        }
-        if (mode === "raw") {
-          sorted.sort((a, b) => {
-            if (a.overallRaw === null && b.overallRaw === null)
-              return b.overallConfidence - a.overallConfidence;
-            if (a.overallRaw === null) return 1;
-            if (b.overallRaw === null) return -1;
-            const rawCmp = compareNumbersDesc(a.overallRaw, b.overallRaw);
-            if (rawCmp !== 0) return rawCmp;
-            return b.overallConfidence - a.overallConfidence;
-          });
-          return sorted;
-        }
-        sorted.sort((a, b) => {
-          const confidenceCmp = compareNumbersDesc(
-            a.overallConfidence,
-            b.overallConfidence,
-          );
-          if (confidenceCmp !== 0) return confidenceCmp;
-          return b.totalEvals - a.totalEvals;
-        });
-        return sorted;
-      }
-
       function renderModelComparison(rows) {
         const body = document.getElementById("selection-summary-models-body");
         body.innerHTML = rows
@@ -3474,7 +3820,7 @@
               const stats = row.colors[color];
               if (stats.avg === null) return "<td>—</td>";
               const rounded = Math.round(stats.avg);
-              return `<td><span class="${getScoreClass(rounded)}">${rounded}%</span> <span class="summary-cell-meta">${stats.sessions}s · ${stats.total}e</span></td>`;
+              return `<td><span class="${getScoreClass(rounded)}">${rounded}%</span></td>`;
             }).join("");
             const overallRounded =
               row.overallRaw === null ? null : Math.round(row.overallRaw);
@@ -3485,7 +3831,8 @@
                 ${colorCells}
                 <td class="${getScoreClass(overallRounded)}">${overallRounded === null ? "—" : `${overallRounded}%`}</td>
                 <td>${row.overallConfidence.toFixed(1)}%</td>
-                <td>${row.sessions}${row.uncolored ? ` <span class="summary-cell-meta">(${row.uncolored} no color)</span>` : ""}</td>
+                <td>${buildEventDotsMarkup(row.eventCounts)}</td>
+                <td>${row.sessions}</td>
                 <td>${row.totalEvals}</td>
               </tr>
             `;
@@ -3496,20 +3843,42 @@
       function buildModelClipboardText(rows) {
         return rows
           .map((row, index) => {
-            const colorParts = SESSION_COLORS.map((color) => {
-              const stats = row.colors[color];
-              const avgText =
-                stats.avg === null ? "—" : `${Math.round(stats.avg)}%`;
-              const metaText = stats.total
-                ? ` (${stats.sessions} session${stats.sessions === 1 ? "" : "s"}, ${stats.total} evals)`
-                : "";
-              return `${color[0].toUpperCase()}${color.slice(1)} - ${avgText}${metaText}`;
-            });
-            return [
+            const lines = [
               `${index + 1}. Model - ${row.model};`,
               `Overall avg - ${row.overallRaw === null ? "—" : `${Math.round(row.overallRaw)}%`}; Confidence - ${row.overallConfidence.toFixed(1)}%;`,
-              `${colorParts.join("; ")}.`,
-            ].join("\n");
+            ];
+            const presentColors = SESSION_COLORS.filter(
+              (color) => row.colors[color].avg !== null,
+            );
+            if (presentColors.length) {
+              lines.push("", "Average scores:");
+              presentColors.forEach((color, colorIndex) => {
+                const stats = row.colors[color];
+                const cap = color[0].toUpperCase() + color.slice(1);
+                const tail =
+                  colorIndex === presentColors.length - 1 ? "." : ";";
+                lines.push(
+                  `${cap} - ${Math.round(stats.avg)}% (${stats.sessions} session${stats.sessions === 1 ? "" : "s"}, ${stats.total} evals)${tail}`,
+                );
+              });
+            }
+            const eventEntries = EVENT_TYPES.map((type) => ({
+              label: type.label,
+              count: row.eventCounts[type.id] || 0,
+            }))
+              .filter((item) => item.count > 0)
+              .sort((a, b) => b.count - a.count);
+            if (eventEntries.length) {
+              lines.push("", "Events:");
+              eventEntries.forEach((item) =>
+                lines.push(`${item.label} - ${item.count};`),
+              );
+            }
+            if (row.comments.length)
+              lines.push("", "Comment:", row.comments.join("\n"));
+            if (row.operators.length)
+              lines.push("", "Operators:", row.operators.join(", "));
+            return lines.join("\n");
           })
           .join("\n\n");
       }
@@ -3525,6 +3894,14 @@
               `${index + 1}. Model - ${row.model || "N/A"}${row.session.color ? ` (${row.session.color})` : ""};`,
               `Success - ${row.summary.successes}; Fail - ${row.summary.fails}; Total - ${row.summary.total}; Score - ${score}.`,
             ];
+            const eventParts = EVENT_TYPES.filter(
+              (type) => row.summary.eventCounts[type.id],
+            )
+              .map(
+                (type) => `${type.label} - ${row.summary.eventCounts[type.id]}`,
+              )
+              .join("; ");
+            if (eventParts) lines.push(`Events: ${eventParts}.`);
             if (cleanedNotes) lines.push(`Notes: ${cleanedNotes}`);
             return lines.join("\n");
           })
@@ -3546,6 +3923,8 @@
                 <td>${row.summary.fails}</td>
                 <td>${row.summary.total}</td>
                 <td class="${scoreClass}">${score === null ? "—" : `${score}%`}</td>
+                <td>${row.summary.ratePerMinute.toFixed(2)}/m</td>
+                <td>${buildEventDotsMarkup(row.summary.eventCounts)}</td>
                 <td class="summary-comment-cell">${row.comment ? escHtml(row.comment) : "—"}</td>
               </tr>
             `;
@@ -3554,23 +3933,35 @@
       }
 
       function refreshSelectionSummaryModal() {
-        const baseRows = getSelectedSummaryBaseRows();
+        const baseRows = getSummaryBaseRows();
         if (!baseRows.length) {
           closeSelectionSummaryModal();
           return;
         }
-        const sortedRows = sortSelectionSummaryRows(baseRows, summarySortMode);
+        const sortedRows = sortRowsBy(
+          baseRows,
+          getSessionSortValue,
+          summarySessionSort,
+          (a, b) => compareByDate(a.session, b.session, "desc"),
+        );
         summaryCurrentRows = sortedRows;
-        summaryModelRows = sortModelComparisonRows(
+        summaryModelRows = sortRowsBy(
           buildModelComparisonRows(baseRows),
+          getModelSortValue,
           summaryModelSort,
+          (a, b) => b.totalEvals - a.totalEvals,
         );
         const subtitle = document.getElementById("selection-summary-subtitle");
-        subtitle.textContent =
+        const scopeLabel = state.selectedSessionIds.length
+          ? `${baseRows.length} SELECTED`
+          : `ALL VISIBLE (${baseRows.length})`;
+        const sortInfo =
           summaryViewMode === "models"
-            ? `${summaryModelRows.length} model${summaryModelRows.length === 1 ? "" : "s"} compared · ranked by ${getModelSortLabel(summaryModelSort)}`
-            : `${sortedRows.length} selected · sorted by ${getSummarySortLabel(summarySortMode)}`;
+            ? `${summaryModelRows.length} MODELS · SORTED BY ${summaryModelSort.key.toUpperCase()} ${summaryModelSort.dir === "desc" ? "↓" : "↑"}`
+            : `SORTED BY ${summarySessionSort.key.toUpperCase()} ${summarySessionSort.dir === "desc" ? "↓" : "↑"}`;
+        subtitle.textContent = `${scopeLabel} · ${sortInfo}`;
         updateSummaryViewControls();
+        updateSummarySortIndicators();
         renderSelectionMetrics(baseRows);
         renderSelectionSummaryModal(sortedRows);
         renderSelectionGraph(sortedRows);
@@ -3590,15 +3981,11 @@
       }
 
       function openSelectionSummaryModal() {
-        const baseRows = getSelectedSummaryBaseRows();
+        const baseRows = getSummaryBaseRows();
         if (!baseRows.length) return;
         summaryViewMode = "list";
-        document.getElementById("selection-summary-sort").value =
-          summarySortMode;
         document.getElementById("selection-summary-graph-metric").value =
           summaryGraphMetric;
-        document.getElementById("selection-summary-model-sort").value =
-          summaryModelSort;
         document.getElementById("selection-summary-copy").textContent = "Copy";
         document
           .getElementById("selection-summary-modal")
@@ -3669,7 +4056,14 @@
         const fails = session.entries.filter(
           (entry) => entry.type === "fail",
         ).length;
-        const total = session.entries.length;
+        const total = successes + fails;
+        const eventCounts = {};
+        let totalEvents = 0;
+        session.entries.forEach((entry) => {
+          if (entry.type !== "event") return;
+          eventCounts[entry.name] = (eventCounts[entry.name] || 0) + 1;
+          totalEvents += 1;
+        });
         const elapsed = session._active
           ? state.elapsed
           : session.elapsedAtSave || 0;
@@ -3693,6 +4087,8 @@
           successes,
           fails,
           total,
+          eventCounts,
+          totalEvents,
           elapsed,
           score,
           successRate,
@@ -3794,14 +4190,14 @@
           session.title || "",
           session.model || "",
           session.comment || "",
-          getGroupName(session.groupId) || "",
+          getTicketName(session.ticketId) || "",
         ].some((value) => value.toLowerCase().includes(normalized));
       }
 
-      function matchesGroupFilter(session) {
-        if (state.historyGroupFilter === "all") return true;
-        if (state.historyGroupFilter === "ungrouped") return !session.groupId;
-        return session.groupId === state.historyGroupFilter;
+      function matchesTicketFilter(session) {
+        if (state.historyTicketFilter === "all") return true;
+        if (state.historyTicketFilter === "ungrouped") return !session.ticketId;
+        return session.ticketId === state.historyTicketFilter;
       }
 
       function getFilteredRenderableSessions() {
@@ -3812,7 +4208,7 @@
           return (
             filterMatch &&
             matchesHistorySearch(session, state.historyQuery) &&
-            matchesGroupFilter(session)
+            matchesTicketFilter(session)
           );
         });
         return sortSessions(filtered);
@@ -3850,28 +4246,29 @@
       }
 
       function updateHistoryControls() {
-        const groupFilter = document.getElementById("history-group-filter");
-        const selectedGroup = state.historyGroupFilter;
-        groupFilter.innerHTML =
-          '<option value="all">ALL GROUPS</option><option value="ungrouped">UNGROUPED</option>' +
-          state.groups
+        const ticketFilter = document.getElementById("history-ticket-filter");
+        const selectedTicket = state.historyTicketFilter;
+        ticketFilter.innerHTML =
+          '<option value="all">ALL TICKETS</option><option value="ungrouped">NO TICKET</option>' +
+          state.tickets
             .map(
-              (group) =>
-                `<option value="${escHtml(group.id)}">${escHtml(group.name)}</option>`,
+              (ticket) =>
+                `<option value="${escHtml(ticket.id)}">${escHtml(ticket.name)}</option>`,
             )
             .join("");
-        groupFilter.value =
-          state.groups.some((group) => group.id === selectedGroup) ||
-          selectedGroup === "all" ||
-          selectedGroup === "ungrouped"
-            ? selectedGroup
+        ticketFilter.value =
+          state.tickets.some((ticket) => ticket.id === selectedTicket) ||
+          selectedTicket === "all" ||
+          selectedTicket === "ungrouped"
+            ? selectedTicket
             : "all";
-        if (groupFilter.value !== selectedGroup)
-          state.historyGroupFilter = groupFilter.value;
+        if (ticketFilter.value !== selectedTicket)
+          state.historyTicketFilter = ticketFilter.value;
         document.getElementById("history-sort").value = state.historySort;
         document.getElementById("history-search").value = state.historyQuery;
 
         const hasSelection = state.selectedSessionIds.length > 0;
+        const visibleCount = getFilteredRenderableSessions().length;
         document
           .getElementById("select-mode-btn")
           .classList.toggle("active", state.selectMode);
@@ -3879,13 +4276,23 @@
           state.selectMode
             ? `SELECTING ${state.selectedSessionIds.length}`
             : "SELECT";
+        [
+          "select-visible-btn",
+          "clear-selection-btn",
+          "assign-ticket-btn",
+          "delete-selected-btn",
+        ].forEach((id) => {
+          document.getElementById(id).style.display = state.selectMode
+            ? ""
+            : "none";
+        });
         document.getElementById("select-visible-btn").disabled =
-          !state.selectMode || !getFilteredRenderableSessions().length;
+          !state.selectMode || !visibleCount;
         document.getElementById("clear-selection-btn").disabled = !hasSelection;
-        document.getElementById("group-selected-btn").disabled = !hasSelection;
-        document.getElementById("summarize-selected-btn").disabled =
-          !hasSelection;
+        document.getElementById("assign-ticket-btn").disabled = !hasSelection;
         document.getElementById("delete-selected-btn").disabled = !hasSelection;
+        document.getElementById("summarize-selected-btn").disabled =
+          !hasSelection && !visibleCount;
       }
 
       function clearSelection() {
@@ -3950,7 +4357,7 @@
           id: Date.now().toString(),
           model: state.currentModel,
           title: "",
-          groupId: "",
+          ticketId: "",
           color: SESSION_COLORS.includes(color) ? color : "",
           comment: "",
           startedAt: new Date().toISOString(),
@@ -4073,6 +4480,65 @@
         save();
       }
 
+      function recordEvent(eventId) {
+        if (!state.currentSession || !state.running) return;
+        if (!EVENT_IDS.includes(eventId)) return;
+        state.currentSession.entries.push({
+          type: "event",
+          name: eventId,
+          ts: formatTime(state.elapsed),
+        });
+        const button = document.querySelector(
+          `.event-btn[data-event="${eventId}"]`,
+        );
+        if (button) {
+          button.classList.remove("flash-event");
+          void button.offsetWidth;
+          button.classList.add("flash-event");
+          setTimeout(() => button.classList.remove("flash-event"), 240);
+        }
+        save();
+        renderHistory();
+      }
+
+      function renderEventButtons() {
+        const row = document.getElementById("event-row");
+        row.innerHTML =
+          '<span class="event-row-label">EVENTS</span>' +
+          EVENT_TYPES.map(
+            (type) =>
+              `<button class="event-btn event-${type.id}" data-event="${type.id}" type="button" disabled><kbd>${type.key.toUpperCase()}</kbd> ${type.label}</button>`,
+          ).join("");
+        row.querySelectorAll(".event-btn").forEach((button) => {
+          button.addEventListener("click", () =>
+            recordEvent(button.dataset.event),
+          );
+        });
+      }
+
+      function buildEventDotsMarkup(eventCounts, emptyText = "—") {
+        const chips = EVENT_TYPES.filter((type) => eventCounts[type.id])
+          .map(
+            (type) =>
+              `<span class="event-dot-tag event-${type.id}" title="${type.label} × ${eventCounts[type.id]}">●${eventCounts[type.id]}</span>`,
+          )
+          .join(" ");
+        return chips || emptyText;
+      }
+
+      function buildCardEventTags(eventCounts) {
+        const present = EVENT_TYPES.filter((type) => eventCounts[type.id]);
+        if (!present.length) return "";
+        const compact = present.length > 2;
+        const chips = present
+          .map(
+            (type) =>
+              `<span class="event-dot-tag event-${type.id}" title="${type.label} × ${eventCounts[type.id]}">${compact ? `●${eventCounts[type.id]}` : `${type.label} ×${eventCounts[type.id]}`}</span>`,
+          )
+          .join("");
+        return `<span class="session-event-tags">${chips}</span>`;
+      }
+
       function updateButtons(running) {
         const hasSession = Boolean(state.currentSession);
         document.getElementById("btn-play").disabled = running || !hasSession;
@@ -4082,6 +4548,9 @@
         document.getElementById("btn-erase").disabled = !hasSession;
         document.getElementById("btn-success").disabled = !running;
         document.getElementById("btn-fail").disabled = !running;
+        document.querySelectorAll(".event-btn").forEach((button) => {
+          button.disabled = !running;
+        });
         document.getElementById("btn-play").classList.toggle("active", running);
         updateDurationUI();
       }
@@ -4094,7 +4563,7 @@
           (entry) => entry.type === "success",
         ).length;
         const fails = entries.filter((entry) => entry.type === "fail").length;
-        const total = entries.length;
+        const total = successes + fails;
         const score = total > 0 ? Math.round((successes / total) * 100) : null;
         document.getElementById("stat-success").textContent = successes;
         document.getElementById("stat-fail").textContent = fails;
@@ -4105,6 +4574,19 @@
 
       function buildEntriesMarkup(session, summary) {
         const commentValue = session.comment || "";
+        const eventChips = EVENT_TYPES.filter(
+          (type) => summary.eventCounts[type.id],
+        )
+          .map(
+            (type) =>
+              `<span class="event-dot-tag event-${type.id}">${type.label} ×${summary.eventCounts[type.id]}</span>`,
+          )
+          .join("");
+        const ticket = getTicketById(session.ticketId);
+        const operatorsChip =
+          ticket && ticket.operators.length
+            ? `<span class="session-summary-chip">OPERATORS: ${escHtml(ticket.operators.join(", "))}</span>`
+            : "";
         const summaryChips = `
     <div class="session-entries-summary">
       <span class="session-summary-chip">QUALITY ${(summary.qualityConfidence * 100).toFixed(1)}%</span>
@@ -4113,6 +4595,7 @@
       <span class="session-summary-chip">RATE ${summary.ratePerMinute.toFixed(2)}/MIN</span>
       <span class="session-summary-chip">DURATION ${formatTime(summary.elapsed)}</span>
       <span class="session-summary-chip">TOTAL ${summary.total}</span>
+      ${eventChips}${operatorsChip}
     </div>
   `;
         const commentMarkup = `
@@ -4127,17 +4610,32 @@
       <div class="session-comment-meta" data-comment-meta="${session.id}">${commentValue.length}/${COMMENT_MAX_LENGTH}</div>
     </div>
   `;
+        let verdictNumber = 0;
         const rows = session.entries.length
           ? session.entries
-              .map(
-                (entry, index) => `
+              .map((entry) => {
+                if (entry.type === "event") {
+                  const type = EVENT_TYPES.find(
+                    (item) => item.id === entry.name,
+                  );
+                  const label = type ? type.label : entry.name;
+                  return `
+        <div class="entry-row ev event-${entry.name}" title="${label} @ ${entry.ts}">
+          <span class="entry-badge">${label}</span>
+          <span class="entry-timestamp">@ ${entry.ts}</span>
+          <span style="font-family:var(--mono);font-size:10px;color:var(--text-dimmer)">EVENT</span>
+        </div>
+      `;
+                }
+                verdictNumber += 1;
+                return `
         <div class="entry-row ${entry.type === "success" ? "s" : "f"}">
           <span class="entry-badge">${entry.type === "success" ? "PASS" : "FAIL"}</span>
           <span class="entry-timestamp">@ ${entry.ts}</span>
-          <span style="font-family:var(--mono);font-size:10px;color:var(--text-dimmer)">#${index + 1}</span>
+          <span style="font-family:var(--mono);font-size:10px;color:var(--text-dimmer)">#${verdictNumber}</span>
         </div>
-      `,
-              )
+      `;
+              })
               .join("")
           : '<div style="font-family:var(--mono);font-size:11px;color:var(--text-dimmer);padding:8px 0">No entries yet.</div>';
         const resumeButton =
@@ -4147,14 +4645,14 @@
         return `${summaryChips}${commentMarkup}${rows}${resumeButton}`;
       }
 
-      function buildInlineGroupOptions(selectedGroupId) {
-        const options = ['<option value="">NO GROUP</option>'];
-        state.groups.forEach((group) => {
+      function buildInlineTicketOptions(selectedTicketId) {
+        const options = ['<option value="">NO TICKET</option>'];
+        state.tickets.forEach((ticket) => {
           options.push(
-            `<option value="${escHtml(group.id)}" ${group.id === selectedGroupId ? "selected" : ""}>${escHtml(group.name)}</option>`,
+            `<option value="${escHtml(ticket.id)}" ${ticket.id === selectedTicketId ? "selected" : ""}>${escHtml(ticket.name)}</option>`,
           );
         });
-        options.push('<option value="__new__">+ NEW GROUP…</option>');
+        options.push('<option value="__new__">+ NEW TICKET…</option>');
         return options.join("");
       }
 
@@ -4174,7 +4672,9 @@
           : session.completed
             ? "DONE"
             : "STOPPED";
-        const groupName = getGroupName(session.groupId);
+        const ticket = getTicketById(session.ticketId);
+        const ticketName = ticket ? ticket.name : "";
+        const ticketOperators = ticket ? ticket.operators : [];
         const rankLabel = summary.total
           ? state.historySort === "worst"
             ? `RISK ${(summary.riskConfidence * 100).toFixed(1)}%`
@@ -4192,10 +4692,11 @@
 
       <div class="session-meta-inner">
         <span class="session-num">${statusLabel} · <span class="session-primary-label">${escHtml(getSessionLabel(session))}</span></span>
-        ${session.title ? `<span class="session-time-tag">${summary.startedAt}</span>` : ""}
+        ${session.title && !summary.totalEvents ? `<span class="session-time-tag">${summary.startedAt}</span>` : ""}
         ${session.model ? `<span class="session-model-tag">${escHtml(session.model)}</span>` : ""}
         ${session.color ? `<span class="session-color-tag ${session.color}">● ${session.color.toUpperCase()}</span>` : ""}
-        ${groupName ? `<span class="session-group-tag">${escHtml(groupName)}</span>` : ""}
+        ${buildCardEventTags(summary.eventCounts)}
+        ${ticketName ? `<span class="session-ticket-tag" title="${escHtml(ticketOperators.length ? `OPERATORS: ${ticketOperators.join(", ")}` : "NO OPERATORS")}">${escHtml(ticketName)}</span>` : ""}
         ${session.comment ? '<span class="session-comment-tag">COMMENT</span>' : ""}
         <span class="session-time-tag">${formatTime(summary.elapsed)}</span>
         <span class="session-rank-tag">${rankLabel}</span>
@@ -4206,8 +4707,8 @@
         </div>
       </div>
 
-      <select class="session-inline-group" data-inline-group="${session.id}" title="Assign group">
-        ${buildInlineGroupOptions(session.groupId)}
+      <select class="session-inline-ticket" data-inline-ticket="${session.id}" title="Assign ticket">
+        ${buildInlineTicketOptions(session.ticketId)}
       </select>
 
       ${!session._active ? `<button class="session-action-btn" data-rename="${session.id}" title="Rename session">Rename</button>` : ""}
@@ -4223,7 +4724,7 @@
             if (
               event.target.closest(".session-action-btn") ||
               event.target.closest(".session-select-wrap") ||
-              event.target.closest(".session-inline-group")
+              event.target.closest(".session-inline-ticket")
             )
               return;
             card.classList.toggle("expanded");
@@ -4239,7 +4740,7 @@
           );
         }
 
-        const inlineGroup = card.querySelector("[data-inline-group]");
+        const inlineGroup = card.querySelector("[data-inline-ticket]");
         if (inlineGroup) {
           inlineGroup.addEventListener("click", (event) =>
             event.stopPropagation(),
@@ -4248,11 +4749,11 @@
             event.stopPropagation();
             const value = event.target.value;
             if (value === "__new__") {
-              event.target.value = session.groupId || "";
-              openGroupModal("single", session.id);
+              event.target.value = session.ticketId || "";
+              openTicketModal("single", session.id);
               return;
             }
-            setSessionGroup(session.id, value);
+            setSessionTicket(session.id, value);
           });
         }
 
@@ -4378,8 +4879,7 @@
           updateButtons(false);
           updateTitleUI();
         }
-        const removedCount =
-          removedArchived.length + (removedCurrent ? 1 : 0);
+        const removedCount = removedArchived.length + (removedCurrent ? 1 : 0);
         if (!removedCount) return;
         state.selectedSessionIds = [];
         closeSelectionSummaryModal();
@@ -4391,88 +4891,98 @@
         );
       }
 
-      function openNewSessionModal() {
-        document.getElementById("new-session-modal").classList.add("visible");
-        updateModalScrollLock();
+      function openColorSelectRow() {
+        document.getElementById("color-select-row").classList.add("visible");
+        document.getElementById("btn-new").classList.add("active");
       }
 
-      function closeNewSessionModal() {
+      function closeColorSelectRow() {
         document
-          .getElementById("new-session-modal")
+          .getElementById("color-select-row")
           .classList.remove("visible");
-        updateModalScrollLock();
+        document.getElementById("btn-new").classList.remove("active");
       }
 
-      function getGroupSessionCount(groupId) {
+      function toggleColorSelectRow() {
+        const isVisible = document
+          .getElementById("color-select-row")
+          .classList.contains("visible");
+        if (isVisible) closeColorSelectRow();
+        else openColorSelectRow();
+      }
+
+      function getTicketSessionCount(ticketId) {
         return getAllRenderableSessions().filter(
-          (session) => session.groupId === groupId,
+          (session) => session.ticketId === ticketId,
         ).length;
       }
 
-      function populateDeleteGroupSelect() {
-        const select = document.getElementById("delete-group-select");
+      function populateDeleteTicketSelect() {
+        const select = document.getElementById("delete-ticket-select");
         select.innerHTML =
-          '<option value="">SELECT A GROUP</option>' +
-          state.groups
-            .map((group) => {
-              const count = getGroupSessionCount(group.id);
-              return `<option value="${escHtml(group.id)}">${escHtml(group.name)} (${count} SESSION${count === 1 ? "" : "S"})</option>`;
+          '<option value="">SELECT A TICKET</option>' +
+          state.tickets
+            .map((ticket) => {
+              const count = getTicketSessionCount(ticket.id);
+              return `<option value="${escHtml(ticket.id)}">${escHtml(ticket.name)} (${count} SESSION${count === 1 ? "" : "S"})</option>`;
             })
             .join("");
       }
 
-      function updateDeleteGroupModalState() {
-        const select = document.getElementById("delete-group-select");
-        const note = document.getElementById("delete-group-note");
-        const confirmBtn = document.getElementById("delete-group-confirm");
-        const groupId = select.value;
-        if (!groupId) {
-          note.textContent = state.groups.length
-            ? "Only empty groups can be deleted."
-            : "No groups exist yet.";
+      function updateDeleteTicketModalState() {
+        const select = document.getElementById("delete-ticket-select");
+        const note = document.getElementById("delete-ticket-note");
+        const confirmBtn = document.getElementById("delete-ticket-confirm");
+        const ticketId = select.value;
+        if (!ticketId) {
+          note.textContent = state.tickets.length
+            ? "Only empty tickets can be deleted."
+            : "No tickets exist yet.";
           note.classList.remove("error");
           confirmBtn.disabled = true;
           return;
         }
-        const count = getGroupSessionCount(groupId);
+        const count = getTicketSessionCount(ticketId);
         if (count > 0) {
-          note.textContent = `This group still has ${count} session${count === 1 ? "" : "s"}. Move or delete them first.`;
+          note.textContent = `This ticket still has ${count} session${count === 1 ? "" : "s"}. Move or delete them first.`;
           note.classList.add("error");
           confirmBtn.disabled = true;
         } else {
-          note.textContent = "This group is empty and can be deleted.";
+          note.textContent = "This ticket is empty and can be deleted.";
           note.classList.remove("error");
           confirmBtn.disabled = false;
         }
       }
 
-      function openDeleteGroupModal() {
-        populateDeleteGroupSelect();
-        updateDeleteGroupModalState();
-        document.getElementById("delete-group-modal").classList.add("visible");
+      function openDeleteTicketModal() {
+        populateDeleteTicketSelect();
+        updateDeleteTicketModalState();
+        document.getElementById("delete-ticket-modal").classList.add("visible");
         updateModalScrollLock();
-        document.getElementById("delete-group-select").focus();
+        document.getElementById("delete-ticket-select").focus();
       }
 
-      function closeDeleteGroupModal() {
+      function closeDeleteTicketModal() {
         document
-          .getElementById("delete-group-modal")
+          .getElementById("delete-ticket-modal")
           .classList.remove("visible");
         updateModalScrollLock();
       }
 
-      function confirmDeleteGroup() {
-        const groupId = document.getElementById("delete-group-select").value;
-        if (!groupId) return;
-        if (getGroupSessionCount(groupId) > 0) {
-          updateDeleteGroupModalState();
+      function confirmDeleteTicket() {
+        const ticketId = document.getElementById("delete-ticket-select").value;
+        if (!ticketId) return;
+        if (getTicketSessionCount(ticketId) > 0) {
+          updateDeleteTicketModalState();
           return;
         }
-        state.groups = state.groups.filter((group) => group.id !== groupId);
-        if (state.historyGroupFilter === groupId)
-          state.historyGroupFilter = "all";
+        state.tickets = state.tickets.filter(
+          (ticket) => ticket.id !== ticketId,
+        );
+        if (state.historyTicketFilter === ticketId)
+          state.historyTicketFilter = "all";
         save();
-        closeDeleteGroupModal();
+        closeDeleteTicketModal();
         renderHistory();
       }
 
@@ -4610,57 +5120,67 @@
         closeRenameModal();
       }
 
-      function populateGroupModalSelect() {
-        const select = document.getElementById("group-modal-select");
+      function populateTicketModalSelect() {
+        const select = document.getElementById("ticket-modal-select");
         const currentValue = select.value;
         select.innerHTML =
-          '<option value="">SELECT A GROUP</option><option value="ungrouped">NO GROUP</option>' +
-          state.groups
+          '<option value="">SELECT A TICKET</option><option value="ungrouped">NO TICKET</option>' +
+          state.tickets
             .map(
-              (group) =>
-                `<option value="${escHtml(group.id)}">${escHtml(group.name)}</option>`,
+              (ticket) =>
+                `<option value="${escHtml(ticket.id)}">${escHtml(ticket.name)}</option>`,
             )
             .join("");
         if ([...select.options].some((option) => option.value === currentValue))
           select.value = currentValue;
       }
 
-      function openGroupModal(mode, targetSessionId = null) {
-        groupModalMode = mode;
-        groupModalTargetId = targetSessionId;
-        populateGroupModalSelect();
+      function syncTicketModalOperators() {
+        const select = document.getElementById("ticket-modal-select");
+        const operatorsInput = document.getElementById(
+          "ticket-modal-operators",
+        );
+        const ticket = getTicketById(select.value);
+        operatorsInput.value = ticket ? ticket.operators.join(", ") : "";
+      }
 
-        const modalTitle = document.getElementById("group-modal-title");
-        const confirmBtn = document.getElementById("group-modal-confirm");
-        const input = document.getElementById("group-modal-input");
-        const select = document.getElementById("group-modal-select");
+      function openTicketModal(mode, targetSessionId = null) {
+        ticketModalMode = mode;
+        ticketModalTargetId = targetSessionId;
+        populateTicketModalSelect();
+
+        const modalTitle = document.getElementById("ticket-modal-title");
+        const confirmBtn = document.getElementById("ticket-modal-confirm");
+        const input = document.getElementById("ticket-modal-input");
+        const select = document.getElementById("ticket-modal-select");
 
         input.value = "";
         select.value = "";
 
         if (mode === "assign") {
-          modalTitle.textContent = "Group Selected Sessions";
+          modalTitle.textContent = "Add Selected to Ticket";
           confirmBtn.textContent = "Apply";
         } else if (mode === "single") {
-          modalTitle.textContent = "Set Session Group";
+          modalTitle.textContent = "Set Session Ticket";
           confirmBtn.textContent = "Save";
           const session = getStoredSessionById(targetSessionId);
-          if (session && session.groupId) select.value = session.groupId;
-          if (session && !session.groupId) select.value = "ungrouped";
+          if (session && session.ticketId) select.value = session.ticketId;
+          if (session && !session.ticketId) select.value = "ungrouped";
         } else {
-          modalTitle.textContent = "Create Group";
+          modalTitle.textContent = "Create Ticket";
           confirmBtn.textContent = "Create";
         }
+        syncTicketModalOperators();
 
-        document.getElementById("group-modal").classList.add("visible");
+        document.getElementById("ticket-modal").classList.add("visible");
         updateModalScrollLock();
         if (mode === "create") input.focus();
         else select.focus();
       }
 
-      function closeGroupModal() {
-        groupModalTargetId = null;
-        document.getElementById("group-modal").classList.remove("visible");
+      function closeTicketModal() {
+        ticketModalTargetId = null;
+        document.getElementById("ticket-modal").classList.remove("visible");
         updateModalScrollLock();
       }
 
@@ -4675,30 +5195,38 @@
         return selected;
       }
 
-      function applyGroupFromModal() {
-        const selectValue = document.getElementById("group-modal-select").value;
+      function applyTicketFromModal() {
+        const selectValue = document.getElementById("ticket-modal-select").value;
         const typedName = document
-          .getElementById("group-modal-input")
+          .getElementById("ticket-modal-input")
           .value.trim();
+        const operators = parseOperators(
+          document.getElementById("ticket-modal-operators").value,
+        );
 
-        if (groupModalMode === "create") {
-          const createdId = ensureGroup(typedName);
+        if (ticketModalMode === "create") {
+          const createdId = ensureTicket(typedName);
           if (!createdId) return;
+          const created = getTicketById(createdId);
+          if (created) created.operators = operators;
           save();
-          closeGroupModal();
+          closeTicketModal();
           renderHistory();
           return;
         }
 
-        let groupId = "";
-        if (typedName) groupId = ensureGroup(typedName);
-        else if (selectValue === "ungrouped") groupId = "";
-        else if (selectValue) groupId = selectValue;
+        let ticketId = "";
+        if (typedName) ticketId = ensureTicket(typedName);
+        else if (selectValue === "ungrouped") ticketId = "";
+        else if (selectValue) ticketId = selectValue;
         else return;
 
+        const targetTicket = getTicketById(ticketId);
+        if (targetTicket) targetTicket.operators = operators;
+
         let targets = [];
-        if (groupModalMode === "single") {
-          const session = getStoredSessionById(groupModalTargetId);
+        if (ticketModalMode === "single") {
+          const session = getStoredSessionById(ticketModalTargetId);
           if (session) targets = [session];
         } else {
           targets = getSelectedStoredSessions();
@@ -4707,11 +5235,11 @@
         if (!targets.length) return;
 
         targets.forEach((session) => {
-          session.groupId = groupId;
+          session.ticketId = ticketId;
         });
 
         save();
-        closeGroupModal();
+        closeTicketModal();
         renderHistory();
       }
 
@@ -4838,8 +5366,8 @@
         renderHistory();
       }
 
-      function setHistoryGroupFilter(groupId) {
-        state.historyGroupFilter = groupId;
+      function setHistoryTicketFilter(ticketId) {
+        state.historyTicketFilter = ticketId;
         save();
         renderHistory();
       }
@@ -4853,6 +5381,7 @@
       function getExportRows() {
         return getExportSessions().map((session) => {
           const summary = getSessionSummary(session);
+          const ticket = getTicketById(session.ticketId);
           return {
             session_id: session.id,
             status: getSessionStatus(session).toUpperCase(),
@@ -4860,7 +5389,8 @@
             display_label: getSessionLabel(session),
             model: session.model || "",
             color: session.color || "",
-            group: getGroupName(session.groupId),
+            ticket: getTicketName(session.ticketId),
+            ticket_operators: ticket ? ticket.operators.join(", ") : "",
             comment: session.comment || "",
             started_at: session.startedAt || "",
             target_duration_seconds: getSessionTargetDuration(session),
@@ -4880,8 +5410,15 @@
               ? Number((summary.wilsonLower * 100).toFixed(2))
               : "",
             rate_per_minute: Number(summary.ratePerMinute.toFixed(4)),
+            events: EVENT_TYPES.filter((type) => summary.eventCounts[type.id])
+              .map((type) => `${type.id}:${summary.eventCounts[type.id]}`)
+              .join("|"),
+            total_events: summary.totalEvents,
             entries: session.entries
-              .map((entry) => `${entry.type.toUpperCase()}@${entry.ts}`)
+              .map(
+                (entry) =>
+                  `${entry.type === "event" ? `EVENT:${entry.name.toUpperCase()}` : entry.type.toUpperCase()}@${entry.ts}`,
+              )
               .join(" | "),
             entries_json: JSON.stringify(session.entries),
           };
@@ -4932,7 +5469,11 @@
             elapsed: session._active
               ? state.elapsed
               : session.elapsedAtSave || 0,
-            groupName: getGroupName(session.groupId),
+            ticketName: getTicketName(session.ticketId),
+            ticketOperators: (() => {
+              const ticket = getTicketById(session.ticketId);
+              return ticket ? ticket.operators : [];
+            })(),
             targetDuration: getSessionTargetDuration(session),
             wilsonLower: Number(summary.wilsonLower.toFixed(6)),
             qualityConfidence: Number(summary.qualityConfidence.toFixed(6)),
@@ -4975,23 +5516,17 @@
         .addEventListener("click", showEraseModal);
       document
         .getElementById("btn-new")
-        .addEventListener("click", openNewSessionModal);
+        .addEventListener("click", toggleColorSelectRow);
 
       document.querySelectorAll("[data-session-color]").forEach((button) => {
         button.addEventListener("click", () => {
-          closeNewSessionModal();
+          closeColorSelectRow();
           newSession(button.dataset.sessionColor);
         });
       });
       document
-        .getElementById("new-session-cancel")
-        .addEventListener("click", closeNewSessionModal);
-      document
-        .getElementById("new-session-modal")
-        .addEventListener("click", (event) => {
-          if (event.target === document.getElementById("new-session-modal"))
-            closeNewSessionModal();
-        });
+        .getElementById("color-select-cancel")
+        .addEventListener("click", closeColorSelectRow);
 
       document.getElementById("btn-success").addEventListener("click", () => {
         recordVerdict("success");
@@ -5038,6 +5573,23 @@
           )
         )
           return;
+        if (
+          !event.metaKey &&
+          !event.ctrlKey &&
+          !event.altKey &&
+          !event.repeat
+        ) {
+          const eventType = EVENT_TYPES.find(
+            (type) => type.key === event.key.toLowerCase(),
+          );
+          if (eventType) {
+            if (state.running && state.currentSession) {
+              event.preventDefault();
+              recordEvent(eventType.id);
+            }
+            return;
+          }
+        }
         if (event.key === "ArrowRight") {
           event.preventDefault();
           if (!document.getElementById("btn-success").disabled) {
@@ -5062,9 +5614,9 @@
           closeRenameModal();
         } else if (
           event.key === "Escape" &&
-          document.getElementById("group-modal").classList.contains("visible")
+          document.getElementById("ticket-modal").classList.contains("visible")
         ) {
-          closeGroupModal();
+          closeTicketModal();
         } else if (
           event.key === "Escape" &&
           document
@@ -5075,17 +5627,17 @@
         } else if (
           event.key === "Escape" &&
           document
-            .getElementById("new-session-modal")
+            .getElementById("color-select-row")
             .classList.contains("visible")
         ) {
-          closeNewSessionModal();
+          closeColorSelectRow();
         } else if (
           event.key === "Escape" &&
           document
-            .getElementById("delete-group-modal")
+            .getElementById("delete-ticket-modal")
             .classList.contains("visible")
         ) {
-          closeDeleteGroupModal();
+          closeDeleteTicketModal();
         } else if (
           event.key === "Escape" &&
           document
@@ -5163,9 +5715,9 @@
           setHistoryQuery(event.target.value),
         );
       document
-        .getElementById("history-group-filter")
+        .getElementById("history-ticket-filter")
         .addEventListener("change", (event) =>
-          setHistoryGroupFilter(event.target.value),
+          setHistoryTicketFilter(event.target.value),
         );
       document
         .getElementById("history-sort")
@@ -5186,31 +5738,31 @@
           renderHistory();
         });
       document
-        .getElementById("group-selected-btn")
-        .addEventListener("click", () => openGroupModal("assign"));
+        .getElementById("assign-ticket-btn")
+        .addEventListener("click", () => openTicketModal("assign"));
       document
         .getElementById("summarize-selected-btn")
         .addEventListener("click", openSelectionSummaryModal);
       document
-        .getElementById("new-group-btn")
-        .addEventListener("click", () => openGroupModal("create"));
+        .getElementById("new-ticket-btn")
+        .addEventListener("click", () => openTicketModal("create"));
       document
-        .getElementById("delete-group-btn")
-        .addEventListener("click", openDeleteGroupModal);
+        .getElementById("delete-ticket-btn")
+        .addEventListener("click", openDeleteTicketModal);
       document
-        .getElementById("delete-group-cancel")
-        .addEventListener("click", closeDeleteGroupModal);
+        .getElementById("delete-ticket-cancel")
+        .addEventListener("click", closeDeleteTicketModal);
       document
-        .getElementById("delete-group-confirm")
-        .addEventListener("click", confirmDeleteGroup);
+        .getElementById("delete-ticket-confirm")
+        .addEventListener("click", confirmDeleteTicket);
       document
-        .getElementById("delete-group-select")
-        .addEventListener("change", updateDeleteGroupModalState);
+        .getElementById("delete-ticket-select")
+        .addEventListener("change", updateDeleteTicketModalState);
       document
-        .getElementById("delete-group-modal")
+        .getElementById("delete-ticket-modal")
         .addEventListener("click", (event) => {
-          if (event.target === document.getElementById("delete-group-modal"))
-            closeDeleteGroupModal();
+          if (event.target === document.getElementById("delete-ticket-modal"))
+            closeDeleteTicketModal();
         });
       document
         .getElementById("delete-selected-btn")
@@ -5227,9 +5779,7 @@
       document
         .getElementById("delete-selected-modal")
         .addEventListener("click", (event) => {
-          if (
-            event.target === document.getElementById("delete-selected-modal")
-          )
+          if (event.target === document.getElementById("delete-selected-modal"))
             hideDeleteSelectedModal();
         });
 
@@ -5259,28 +5809,37 @@
         });
 
       document
-        .getElementById("group-modal-cancel")
-        .addEventListener("click", closeGroupModal);
+        .getElementById("ticket-modal-cancel")
+        .addEventListener("click", closeTicketModal);
       document
-        .getElementById("group-modal-confirm")
-        .addEventListener("click", applyGroupFromModal);
+        .getElementById("ticket-modal-confirm")
+        .addEventListener("click", applyTicketFromModal);
       document
-        .getElementById("group-modal")
+        .getElementById("ticket-modal")
         .addEventListener("click", (event) => {
-          if (event.target === document.getElementById("group-modal"))
-            closeGroupModal();
+          if (event.target === document.getElementById("ticket-modal"))
+            closeTicketModal();
         });
       document
-        .getElementById("group-modal-input")
+        .getElementById("ticket-modal-input")
         .addEventListener("keydown", (event) => {
-          if (event.key === "Enter") applyGroupFromModal();
-          if (event.key === "Escape") closeGroupModal();
+          if (event.key === "Enter") applyTicketFromModal();
+          if (event.key === "Escape") closeTicketModal();
         });
       document
-        .getElementById("group-modal-select")
+        .getElementById("ticket-modal-select")
         .addEventListener("keydown", (event) => {
-          if (event.key === "Enter") applyGroupFromModal();
-          if (event.key === "Escape") closeGroupModal();
+          if (event.key === "Enter") applyTicketFromModal();
+          if (event.key === "Escape") closeTicketModal();
+        });
+      document
+        .getElementById("ticket-modal-select")
+        .addEventListener("change", syncTicketModalOperators);
+      document
+        .getElementById("ticket-modal-operators")
+        .addEventListener("keydown", (event) => {
+          if (event.key === "Enter") applyTicketFromModal();
+          if (event.key === "Escape") closeTicketModal();
         });
 
       document
@@ -5290,10 +5849,11 @@
         .getElementById("selection-summary-copy")
         .addEventListener("click", copySelectionSummary);
       document
-        .getElementById("selection-summary-sort")
-        .addEventListener("change", (event) => {
-          summarySortMode = event.target.value;
-          refreshSelectionSummaryModal();
+        .querySelectorAll(".summary-table th.sortable")
+        .forEach((th) => {
+          th.addEventListener("click", () =>
+            handleSummaryHeaderClick(th.dataset.table, th.dataset.sort),
+          );
         });
       document
         .getElementById("selection-summary-graph-metric")
@@ -5320,12 +5880,6 @@
           refreshSelectionSummaryModal();
         });
       document
-        .getElementById("selection-summary-model-sort")
-        .addEventListener("change", (event) => {
-          summaryModelSort = event.target.value;
-          refreshSelectionSummaryModal();
-        });
-      document
         .getElementById("selection-summary-modal")
         .addEventListener("click", (event) => {
           if (
@@ -5345,6 +5899,7 @@
         }
       }, 3000);
 
+      renderEventButtons();
       load();
       updateTimerDisplay();
       updateStats();
@@ -5357,4 +5912,3 @@
     </script>
   </body>
 </html>
-
