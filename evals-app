@@ -27,6 +27,8 @@
         --fail: #ff3355;
         --fail-dim: rgba(255, 51, 85, 0.12);
         --warn: #ffaa00;
+        --blue: #4f7dff;
+        --blue-dim: rgba(79, 125, 255, 0.12);
         --mono: "Share Tech Mono", monospace;
         --sans: "Barlow Condensed", sans-serif;
       }
@@ -739,7 +741,8 @@
       }
 
       .history-select,
-      #group-modal-select {
+      #group-modal-select,
+      #delete-group-select {
         min-width: 150px;
         font-family: var(--mono);
         font-size: 11px;
@@ -753,7 +756,8 @@
         outline: none;
       }
 
-      #group-modal-select {
+      #group-modal-select,
+      #delete-group-select {
         width: 100%;
         border-radius: 3px;
         margin-bottom: 12px;
@@ -761,7 +765,8 @@
       }
 
       .history-select:focus,
-      #group-modal-select:focus {
+      #group-modal-select:focus,
+      #delete-group-select:focus {
         border-color: var(--accent);
         box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.08);
       }
@@ -1010,6 +1015,122 @@
         color: var(--accent);
         background: var(--accent-dim);
         border: 1px solid rgba(0, 229, 255, 0.25);
+      }
+
+      .session-color-tag {
+        font-family: var(--mono);
+        font-size: 12px;
+        letter-spacing: 0.06em;
+        padding: 3px 8px;
+        border-radius: 999px;
+        text-transform: uppercase;
+      }
+
+      .session-color-tag.red {
+        color: var(--fail);
+        background: var(--fail-dim);
+        border: 1px solid rgba(255, 51, 85, 0.3);
+      }
+
+      .session-color-tag.yellow {
+        color: var(--warn);
+        background: rgba(255, 170, 0, 0.12);
+        border: 1px solid rgba(255, 170, 0, 0.3);
+      }
+
+      .session-color-tag.blue {
+        color: var(--blue);
+        background: var(--blue-dim);
+        border: 1px solid rgba(79, 125, 255, 0.3);
+      }
+
+      .timer-session-color.red {
+        color: var(--fail);
+      }
+      .timer-session-color.yellow {
+        color: var(--warn);
+      }
+      .timer-session-color.blue {
+        color: var(--blue);
+      }
+
+      .color-options {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 16px;
+      }
+
+      .color-option-btn {
+        flex: 1;
+        font-family: var(--sans);
+        font-weight: 900;
+        font-size: 15px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        padding: 22px 8px;
+        border-radius: 4px;
+        cursor: pointer;
+        background: var(--surface2);
+        transition: all 0.15s;
+      }
+
+      .color-option-btn:active {
+        transform: scale(0.96);
+      }
+
+      .color-option-btn.red {
+        border: 2px solid rgba(255, 51, 85, 0.35);
+        color: var(--fail);
+      }
+      .color-option-btn.red:hover {
+        background: rgba(255, 51, 85, 0.18);
+        border-color: var(--fail);
+        box-shadow: 0 0 24px rgba(255, 51, 85, 0.2);
+      }
+
+      .color-option-btn.yellow {
+        border: 2px solid rgba(255, 170, 0, 0.35);
+        color: var(--warn);
+      }
+      .color-option-btn.yellow:hover {
+        background: rgba(255, 170, 0, 0.18);
+        border-color: var(--warn);
+        box-shadow: 0 0 24px rgba(255, 170, 0, 0.2);
+      }
+
+      .color-option-btn.blue {
+        border: 2px solid rgba(79, 125, 255, 0.35);
+        color: var(--blue);
+      }
+      .color-option-btn.blue:hover {
+        background: rgba(79, 125, 255, 0.18);
+        border-color: var(--blue);
+        box-shadow: 0 0 24px rgba(79, 125, 255, 0.2);
+      }
+
+      .modal-note {
+        font-family: var(--mono);
+        font-size: 11px;
+        line-height: 1.6;
+        letter-spacing: 0.04em;
+        color: var(--text-dimmer);
+        margin-bottom: 14px;
+      }
+
+      .modal-note.error {
+        color: var(--fail);
+      }
+
+      .history-utility-btn.danger:hover {
+        border-color: var(--fail);
+        color: var(--fail);
+        background: var(--fail-dim);
+      }
+
+      .summary-cell-meta {
+        color: var(--text-dimmer);
+        font-size: 9px;
+        white-space: nowrap;
       }
 
       .session-quick-stats {
@@ -1629,6 +1750,11 @@
         opacity: 0.8;
       }
 
+      .modal-btns button:disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+      }
+
       .confirm-modal-overlay {
         display: none;
         position: fixed;
@@ -1996,8 +2122,8 @@
             <button class="duration-btn" data-duration="900" type="button">
               15m
             </button>
-            <button class="duration-btn" data-duration="1200" type="button">
-              20m
+            <button class="duration-btn" data-duration="0" type="button">
+              Unlimited
             </button>
           </div>
           <div class="duration-custom">
@@ -2194,11 +2320,26 @@
                 SUMMARIZE
               </button>
               <button
+                class="history-utility-btn danger"
+                id="delete-selected-btn"
+                type="button"
+                disabled
+              >
+                DELETE SELECTED
+              </button>
+              <button
                 class="history-utility-btn"
                 id="new-group-btn"
                 type="button"
               >
                 NEW GROUP
+              </button>
+              <button
+                class="history-utility-btn danger"
+                id="delete-group-btn"
+                type="button"
+              >
+                DELETE GROUP
               </button>
             </div>
             <div class="export-group">
@@ -2260,7 +2401,11 @@
             SELECT SESSIONS TO GENERATE A SUMMARY
           </div>
           <div class="summary-toolbar-controls">
-            <label class="summary-toolbar-label" for="selection-summary-sort">
+            <label
+              class="summary-toolbar-label"
+              for="selection-summary-sort"
+              id="selection-summary-sort-label"
+            >
               SORT
             </label>
             <select
@@ -2274,6 +2419,7 @@
             <label
               class="summary-toolbar-label"
               for="selection-summary-graph-metric"
+              id="selection-summary-graph-metric-label"
             >
               GRAPH
             </label>
@@ -2284,6 +2430,25 @@
               <option value="score">SCORE %</option>
               <option value="rate">THROUGHPUT</option>
               <option value="total">TOTAL EVALS</option>
+            </select>
+            <label
+              class="summary-toolbar-label"
+              for="selection-summary-model-sort"
+              id="selection-summary-model-sort-label"
+              style="display: none"
+            >
+              RANK BY
+            </label>
+            <select
+              class="history-select summary-control"
+              id="selection-summary-model-sort"
+              style="display: none"
+            >
+              <option value="confidence">OVERALL (CONFIDENCE)</option>
+              <option value="raw">OVERALL (RAW AVG)</option>
+              <option value="red">RED AVG</option>
+              <option value="yellow">YELLOW AVG</option>
+              <option value="blue">BLUE AVG</option>
             </select>
             <div class="summary-view-switch">
               <button
@@ -2299,6 +2464,13 @@
                 type="button"
               >
                 CHART
+              </button>
+              <button
+                class="history-utility-btn"
+                id="selection-summary-view-models"
+                type="button"
+              >
+                BY MODEL
               </button>
             </div>
           </div>
@@ -2338,6 +2510,7 @@
               <tr>
                 <th>#</th>
                 <th>Model</th>
+                <th>Color</th>
                 <th>Success</th>
                 <th>Fail</th>
                 <th>Total</th>
@@ -2348,12 +2521,95 @@
             <tbody id="selection-summary-body"></tbody>
           </table>
         </div>
+        <div
+          class="summary-list-wrap hidden"
+          id="selection-summary-models-wrap"
+        >
+          <table class="summary-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Model</th>
+                <th>Red</th>
+                <th>Yellow</th>
+                <th>Blue</th>
+                <th>Overall Avg</th>
+                <th>Confidence</th>
+                <th>Sessions</th>
+                <th>Evals</th>
+              </tr>
+            </thead>
+            <tbody id="selection-summary-models-body"></tbody>
+          </table>
+        </div>
         <div class="summary-copy-note">
           Copy uses the exact current sort order shown in this modal.
         </div>
         <div class="modal-btns">
           <button id="selection-summary-close">Close</button>
           <button class="primary" id="selection-summary-copy">Copy</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="new-session-modal">
+      <div class="modal">
+        <div class="modal-title">New Session · Pick a Color</div>
+        <div class="color-options">
+          <button class="color-option-btn red" data-session-color="red" type="button">
+            RED
+          </button>
+          <button class="color-option-btn yellow" data-session-color="yellow" type="button">
+            YELLOW
+          </button>
+          <button class="color-option-btn blue" data-session-color="blue" type="button">
+            BLUE
+          </button>
+        </div>
+        <div class="modal-btns">
+          <button id="new-session-cancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="delete-group-modal">
+      <div class="modal">
+        <div class="modal-title">Delete Group</div>
+        <select id="delete-group-select"></select>
+        <div class="modal-note" id="delete-group-note">
+          Only empty groups can be deleted.
+        </div>
+        <div class="modal-btns">
+          <button id="delete-group-cancel">Cancel</button>
+          <button class="primary" id="delete-group-confirm" disabled>
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="confirm-modal-overlay" id="delete-selected-modal">
+      <div class="confirm-modal">
+        <div class="confirm-modal-top">
+          <span class="confirm-modal-icon">⌫</span>
+          <div class="confirm-modal-title">Delete Selected</div>
+          <div class="confirm-modal-body">
+            This will delete all selected sessions. You can undo for a few
+            seconds afterwards.
+            <span
+              class="confirm-modal-session-name"
+              id="delete-selected-count"
+              >—</span
+            >
+          </div>
+        </div>
+        <div class="confirm-modal-btns">
+          <button class="confirm-modal-cancel" id="delete-selected-cancel">
+            Cancel
+          </button>
+          <button class="confirm-modal-confirm" id="delete-selected-confirm">
+            ⌫ Delete
+          </button>
         </div>
       </div>
     </div>
@@ -2398,7 +2654,9 @@
 
     <script>
       const DEFAULT_SESSION_DURATION = 5 * 60;
-      const DURATION_PRESETS = [300, 600, 900, 1200];
+      const UNLIMITED_DURATION = 0;
+      const DURATION_PRESETS = [300, 600, 900, UNLIMITED_DURATION];
+      const SESSION_COLORS = ["red", "yellow", "blue"];
       const MIN_DURATION_SECONDS = 60;
       const MAX_DURATION_SECONDS = 3 * 60 * 60;
       const STORAGE_KEY = "robot_eval_v5";
@@ -2440,10 +2698,13 @@
       let summaryGraphMetric = "score";
       let summaryViewMode = "list";
       let summaryCurrentRows = [];
+      let summaryModelRows = [];
+      let summaryModelSort = "confidence";
 
       function sanitizeDuration(seconds) {
         const numeric = Number(seconds);
         if (!Number.isFinite(numeric)) return DEFAULT_SESSION_DURATION;
+        if (numeric === UNLIMITED_DURATION) return UNLIMITED_DURATION;
         return Math.min(
           MAX_DURATION_SECONDS,
           Math.max(MIN_DURATION_SECONDS, Math.round(numeric)),
@@ -2473,6 +2734,9 @@
         normalized.model = String(normalized.model || "").trim();
         normalized.title = String(normalized.title || "").trim();
         normalized.groupId = String(normalized.groupId || "").trim();
+        normalized.color = SESSION_COLORS.includes(normalized.color)
+          ? normalized.color
+          : "";
         normalized.comment = sanitizeComment(normalized.comment);
         normalized.startedAt = normalized.startedAt || new Date().toISOString();
         normalized.completed = Boolean(normalized.completed);
@@ -2482,9 +2746,12 @@
           ? Number(normalized.elapsedAtSave)
           : 0;
         normalized.targetDuration = sanitizeDuration(
-          normalized.targetDuration ||
-            state.sessionDuration ||
-            DEFAULT_SESSION_DURATION,
+          normalized.targetDuration === UNLIMITED_DURATION
+            ? UNLIMITED_DURATION
+            : normalized.targetDuration ||
+                (state.sessionDuration === UNLIMITED_DURATION
+                  ? UNLIMITED_DURATION
+                  : state.sessionDuration || DEFAULT_SESSION_DURATION),
         );
         normalized.entries = Array.isArray(normalized.entries)
           ? normalized.entries.map((entry) => ({
@@ -2660,7 +2927,9 @@
           if (!raw) return;
           const parsed = JSON.parse(raw);
           state.sessionDuration = sanitizeDuration(
-            parsed.sessionDuration || DEFAULT_SESSION_DURATION,
+            parsed.sessionDuration === UNLIMITED_DURATION
+              ? UNLIMITED_DURATION
+              : parsed.sessionDuration || DEFAULT_SESSION_DURATION,
           );
           state.sessions = Array.isArray(parsed.sessions)
             ? parsed.sessions.map(normalizeSession)
@@ -2711,16 +2980,40 @@
       }
 
       function getCurrentDuration() {
-        if (state.currentSession)
+        if (state.currentSession) {
+          const target = state.currentSession.targetDuration;
           return sanitizeDuration(
-            state.currentSession.targetDuration || state.sessionDuration,
+            target === UNLIMITED_DURATION
+              ? UNLIMITED_DURATION
+              : target || state.sessionDuration,
           );
+        }
         return sanitizeDuration(state.sessionDuration);
+      }
+
+      function getSessionTargetDuration(session) {
+        const target = session.targetDuration;
+        return sanitizeDuration(
+          target === UNLIMITED_DURATION
+            ? UNLIMITED_DURATION
+            : target || state.sessionDuration,
+        );
       }
 
       function updateDurationUI() {
         const timerLabel = document.getElementById("timer-label");
-        timerLabel.textContent = `SESSION TIMER · ${formatTime(getCurrentDuration())}`;
+        const duration = getCurrentDuration();
+        const durationLabel =
+          duration === UNLIMITED_DURATION ? "UNLIMITED" : formatTime(duration);
+        const sessionColor =
+          state.currentSession && state.currentSession.color
+            ? state.currentSession.color
+            : "";
+        timerLabel.innerHTML = `SESSION TIMER · ${durationLabel}${
+          sessionColor
+            ? ` · <span class="timer-session-color ${sessionColor}">● ${sessionColor.toUpperCase()}</span>`
+            : ""
+        }`;
 
         document.querySelectorAll(".duration-btn").forEach((button) => {
           const duration = Number(button.dataset.duration);
@@ -2753,7 +3046,9 @@
         timerInterval = setInterval(() => {
           state.elapsed += 1;
           updateTimerDisplay();
-          if (state.elapsed >= getCurrentDuration()) completeSession();
+          const duration = getCurrentDuration();
+          if (duration !== UNLIMITED_DURATION && state.elapsed >= duration)
+            completeSession();
         }, 1000);
       }
 
@@ -2775,13 +3070,19 @@
 
       function updateTimerDisplay() {
         const duration = getCurrentDuration();
-        const remaining = Math.max(0, duration - state.elapsed);
         const display = document.getElementById("timer-display");
         const bar = document.getElementById("progress-bar");
-        display.textContent = formatTime(remaining);
-        bar.style.width = `${Math.min((state.elapsed / duration) * 100, 100)}%`;
         display.className = "";
         bar.className = "";
+        if (duration === UNLIMITED_DURATION) {
+          display.textContent = formatTime(state.elapsed);
+          bar.style.width = state.currentSession ? "100%" : "0%";
+          updateDurationUI();
+          return;
+        }
+        const remaining = Math.max(0, duration - state.elapsed);
+        display.textContent = formatTime(remaining);
+        bar.style.width = `${Math.min((state.elapsed / duration) * 100, 100)}%`;
         if (remaining <= 30 && remaining > 0) {
           display.classList.add("danger");
           bar.classList.add("danger");
@@ -2857,6 +3158,21 @@
         if (mode === "recent") return "MOST RECENT";
         if (mode === "fastest") return "FASTEST";
         return "BEST SCORE";
+      }
+
+      function getModelSortLabel(mode) {
+        if (mode === "raw") return "OVERALL (RAW AVG)";
+        if (mode === "red") return "RED AVG";
+        if (mode === "yellow") return "YELLOW AVG";
+        if (mode === "blue") return "BLUE AVG";
+        return "OVERALL (CONFIDENCE)";
+      }
+
+      function getScoreClass(score) {
+        if (score === null) return "";
+        if (score >= 70) return "summary-score-good";
+        if (score >= 40) return "summary-score-mid";
+        return "summary-score-bad";
       }
 
       function getSelectedSummaryBaseRows() {
@@ -2961,28 +3277,53 @@
         };
       }
 
-      function renderSelectionGraph(rows) {
-        const graphWrap = document.getElementById(
-          "selection-summary-graph-wrap",
-        );
-        const listWrap = document.getElementById("selection-summary-list-wrap");
-        const graph = document.getElementById("selection-summary-graph");
-        const graphMetricControl = document.getElementById(
-          "selection-summary-graph-metric",
-        );
-        const listViewButton = document.getElementById(
-          "selection-summary-view-list",
-        );
-        const chartViewButton = document.getElementById(
-          "selection-summary-view-chart",
-        );
+      function updateSummaryViewControls() {
         const showChart = summaryViewMode === "chart";
-        graphWrap.classList.toggle("hidden", !showChart);
-        listWrap.classList.toggle("hidden", showChart);
-        listViewButton.classList.toggle("active", !showChart);
-        chartViewButton.classList.toggle("active", showChart);
-        graphMetricControl.disabled = !showChart;
-        if (!showChart) return;
+        const showModels = summaryViewMode === "models";
+        document
+          .getElementById("selection-summary-graph-wrap")
+          .classList.toggle("hidden", !showChart);
+        document
+          .getElementById("selection-summary-list-wrap")
+          .classList.toggle("hidden", showChart || showModels);
+        document
+          .getElementById("selection-summary-models-wrap")
+          .classList.toggle("hidden", !showModels);
+        document
+          .getElementById("selection-summary-view-list")
+          .classList.toggle("active", summaryViewMode === "list");
+        document
+          .getElementById("selection-summary-view-chart")
+          .classList.toggle("active", showChart);
+        document
+          .getElementById("selection-summary-view-models")
+          .classList.toggle("active", showModels);
+        document.getElementById("selection-summary-graph-metric").disabled =
+          !showChart;
+        const sessionControlsDisplay = showModels ? "none" : "";
+        document.getElementById(
+          "selection-summary-sort-label",
+        ).style.display = sessionControlsDisplay;
+        document.getElementById("selection-summary-sort").style.display =
+          sessionControlsDisplay;
+        document.getElementById(
+          "selection-summary-graph-metric-label",
+        ).style.display = sessionControlsDisplay;
+        document.getElementById(
+          "selection-summary-graph-metric",
+        ).style.display = sessionControlsDisplay;
+        const modelControlsDisplay = showModels ? "" : "none";
+        document.getElementById(
+          "selection-summary-model-sort-label",
+        ).style.display = modelControlsDisplay;
+        document.getElementById(
+          "selection-summary-model-sort",
+        ).style.display = modelControlsDisplay;
+      }
+
+      function renderSelectionGraph(rows) {
+        const graph = document.getElementById("selection-summary-graph");
+        if (summaryViewMode !== "chart") return;
 
         const metric = getSummaryGraphMetricConfig();
         const values = rows.map((row) => metric.value(row));
@@ -3018,6 +3359,161 @@
           : '<div class="summary-graph-value">No data.</div>';
       }
 
+      function buildModelComparisonRows(baseRows) {
+        const map = new Map();
+        baseRows.forEach((row) => {
+          const displayModel = row.model.trim() || "NO MODEL";
+          const key = displayModel.toUpperCase();
+          if (!map.has(key)) {
+            map.set(key, {
+              model: displayModel,
+              sessions: 0,
+              totalEvals: 0,
+              uncolored: 0,
+              colors: Object.fromEntries(
+                SESSION_COLORS.map((color) => [
+                  color,
+                  { sessions: 0, successes: 0, total: 0, scores: [] },
+                ]),
+              ),
+            });
+          }
+          const entry = map.get(key);
+          entry.sessions += 1;
+          entry.totalEvals += row.summary.total;
+          const color = row.session.color;
+          if (color && entry.colors[color]) {
+            const colorStats = entry.colors[color];
+            colorStats.sessions += 1;
+            colorStats.successes += row.summary.successes;
+            colorStats.total += row.summary.total;
+            if (row.summary.score !== null)
+              colorStats.scores.push(row.summary.score);
+          } else {
+            entry.uncolored += 1;
+          }
+        });
+        return [...map.values()].map((entry) => {
+          SESSION_COLORS.forEach((color) => {
+            const colorStats = entry.colors[color];
+            colorStats.avg = colorStats.scores.length
+              ? colorStats.scores.reduce((sum, value) => sum + value, 0) /
+                colorStats.scores.length
+              : null;
+            colorStats.wilson = colorStats.total
+              ? wilsonBound(colorStats.successes, colorStats.total, "lower")
+              : 0;
+          });
+          const availableAvgs = SESSION_COLORS.map(
+            (color) => entry.colors[color].avg,
+          ).filter((value) => value !== null);
+          entry.overallRaw = availableAvgs.length
+            ? availableAvgs.reduce((sum, value) => sum + value, 0) /
+              availableAvgs.length
+            : null;
+          entry.overallConfidence =
+            (SESSION_COLORS.reduce(
+              (sum, color) => sum + entry.colors[color].wilson,
+              0,
+            ) /
+              SESSION_COLORS.length) *
+            100;
+          return entry;
+        });
+      }
+
+      function sortModelComparisonRows(rows, mode) {
+        const sorted = [...rows];
+        if (SESSION_COLORS.includes(mode)) {
+          sorted.sort((a, b) => {
+            const aAvg = a.colors[mode].avg;
+            const bAvg = b.colors[mode].avg;
+            if (aAvg === null && bAvg === null)
+              return b.overallConfidence - a.overallConfidence;
+            if (aAvg === null) return 1;
+            if (bAvg === null) return -1;
+            const avgCmp = compareNumbersDesc(aAvg, bAvg);
+            if (avgCmp !== 0) return avgCmp;
+            const wilsonCmp = compareNumbersDesc(
+              a.colors[mode].wilson,
+              b.colors[mode].wilson,
+            );
+            if (wilsonCmp !== 0) return wilsonCmp;
+            return b.colors[mode].total - a.colors[mode].total;
+          });
+          return sorted;
+        }
+        if (mode === "raw") {
+          sorted.sort((a, b) => {
+            if (a.overallRaw === null && b.overallRaw === null)
+              return b.overallConfidence - a.overallConfidence;
+            if (a.overallRaw === null) return 1;
+            if (b.overallRaw === null) return -1;
+            const rawCmp = compareNumbersDesc(a.overallRaw, b.overallRaw);
+            if (rawCmp !== 0) return rawCmp;
+            return b.overallConfidence - a.overallConfidence;
+          });
+          return sorted;
+        }
+        sorted.sort((a, b) => {
+          const confidenceCmp = compareNumbersDesc(
+            a.overallConfidence,
+            b.overallConfidence,
+          );
+          if (confidenceCmp !== 0) return confidenceCmp;
+          return b.totalEvals - a.totalEvals;
+        });
+        return sorted;
+      }
+
+      function renderModelComparison(rows) {
+        const body = document.getElementById("selection-summary-models-body");
+        body.innerHTML = rows
+          .map((row, index) => {
+            const colorCells = SESSION_COLORS.map((color) => {
+              const stats = row.colors[color];
+              if (stats.avg === null) return "<td>—</td>";
+              const rounded = Math.round(stats.avg);
+              return `<td><span class="${getScoreClass(rounded)}">${rounded}%</span> <span class="summary-cell-meta">${stats.sessions}s · ${stats.total}e</span></td>`;
+            }).join("");
+            const overallRounded =
+              row.overallRaw === null ? null : Math.round(row.overallRaw);
+            return `
+              <tr>
+                <td><span class="summary-rank">${index + 1}</span></td>
+                <td class="summary-model-cell">${escHtml(row.model)}</td>
+                ${colorCells}
+                <td class="${getScoreClass(overallRounded)}">${overallRounded === null ? "—" : `${overallRounded}%`}</td>
+                <td>${row.overallConfidence.toFixed(1)}%</td>
+                <td>${row.sessions}${row.uncolored ? ` <span class="summary-cell-meta">(${row.uncolored} no color)</span>` : ""}</td>
+                <td>${row.totalEvals}</td>
+              </tr>
+            `;
+          })
+          .join("");
+      }
+
+      function buildModelClipboardText(rows) {
+        return rows
+          .map((row, index) => {
+            const colorParts = SESSION_COLORS.map((color) => {
+              const stats = row.colors[color];
+              const avgText =
+                stats.avg === null ? "—" : `${Math.round(stats.avg)}%`;
+              const metaText = stats.total
+                ? ` (${stats.sessions} session${stats.sessions === 1 ? "" : "s"}, ${stats.total} evals)`
+                : "";
+              return `${color[0].toUpperCase()}${color.slice(1)} - ${avgText}${metaText}`;
+            });
+            return [
+              `${index + 1}. Model - ${row.model};`,
+              `Overall avg - ${row.overallRaw === null ? "—" : `${Math.round(row.overallRaw)}%`}; Confidence - ${row.overallConfidence.toFixed(1)}%;`,
+              `${colorParts.join("; ")}.`,
+            ].join("\n");
+          })
+          .join("\n\n");
+      }
+
       function buildSummaryClipboardText(rows) {
         return rows
           .map((row, index) => {
@@ -3026,7 +3522,7 @@
               .trim();
             const score = row.summary.score === null ? "—" : row.summary.score;
             const lines = [
-              `${index + 1}. Model - ${row.model || "N/A"};`,
+              `${index + 1}. Model - ${row.model || "N/A"}${row.session.color ? ` (${row.session.color})` : ""};`,
               `Success - ${row.summary.successes}; Fail - ${row.summary.fails}; Total - ${row.summary.total}; Score - ${score}.`,
             ];
             if (cleanedNotes) lines.push(`Notes: ${cleanedNotes}`);
@@ -3037,23 +3533,15 @@
 
       function renderSelectionSummaryModal(rows) {
         const body = document.getElementById("selection-summary-body");
-        const subtitle = document.getElementById("selection-summary-subtitle");
-        subtitle.textContent = `${rows.length} selected · sorted by ${getSummarySortLabel(summarySortMode)}`;
         body.innerHTML = rows
           .map((row, index) => {
             const score = row.summary.score;
-            const scoreClass =
-              score === null
-                ? ""
-                : score >= 70
-                  ? "summary-score-good"
-                  : score >= 40
-                    ? "summary-score-mid"
-                    : "summary-score-bad";
+            const scoreClass = getScoreClass(score);
             return `
               <tr>
                 <td><span class="summary-rank">${index + 1}</span></td>
                 <td class="summary-model-cell">${escHtml(row.model || "NO MODEL")}</td>
+                <td>${row.session.color ? `<span class="session-color-tag ${row.session.color}">${row.session.color.toUpperCase()}</span>` : "—"}</td>
                 <td>${row.summary.successes}</td>
                 <td>${row.summary.fails}</td>
                 <td>${row.summary.total}</td>
@@ -3073,10 +3561,24 @@
         }
         const sortedRows = sortSelectionSummaryRows(baseRows, summarySortMode);
         summaryCurrentRows = sortedRows;
+        summaryModelRows = sortModelComparisonRows(
+          buildModelComparisonRows(baseRows),
+          summaryModelSort,
+        );
+        const subtitle = document.getElementById("selection-summary-subtitle");
+        subtitle.textContent =
+          summaryViewMode === "models"
+            ? `${summaryModelRows.length} model${summaryModelRows.length === 1 ? "" : "s"} compared · ranked by ${getModelSortLabel(summaryModelSort)}`
+            : `${sortedRows.length} selected · sorted by ${getSummarySortLabel(summarySortMode)}`;
+        updateSummaryViewControls();
         renderSelectionMetrics(baseRows);
         renderSelectionSummaryModal(sortedRows);
         renderSelectionGraph(sortedRows);
-        summaryClipboardText = buildSummaryClipboardText(sortedRows);
+        renderModelComparison(summaryModelRows);
+        summaryClipboardText =
+          summaryViewMode === "models"
+            ? buildModelClipboardText(summaryModelRows)
+            : buildSummaryClipboardText(sortedRows);
       }
 
       function updateModalScrollLock() {
@@ -3095,6 +3597,8 @@
           summarySortMode;
         document.getElementById("selection-summary-graph-metric").value =
           summaryGraphMetric;
+        document.getElementById("selection-summary-model-sort").value =
+          summaryModelSort;
         document.getElementById("selection-summary-copy").textContent = "Copy";
         document
           .getElementById("selection-summary-modal")
@@ -3111,8 +3615,10 @@
       }
 
       async function copySelectionSummary() {
-        if (!summaryCurrentRows.length) return;
-        summaryClipboardText = buildSummaryClipboardText(summaryCurrentRows);
+        summaryClipboardText =
+          summaryViewMode === "models"
+            ? buildModelClipboardText(summaryModelRows)
+            : buildSummaryClipboardText(summaryCurrentRows);
         if (!summaryClipboardText) return;
         const copyButton = document.getElementById("selection-summary-copy");
         let copied = false;
@@ -3379,6 +3885,7 @@
         document.getElementById("group-selected-btn").disabled = !hasSelection;
         document.getElementById("summarize-selected-btn").disabled =
           !hasSelection;
+        document.getElementById("delete-selected-btn").disabled = !hasSelection;
       }
 
       function clearSelection() {
@@ -3433,7 +3940,7 @@
         if (!state.selectedSessionIds.length) closeSelectionSummaryModal();
       }
 
-      function newSession() {
+      function newSession(color) {
         if (state.currentSession && !state.currentSession.completed) {
           state.currentSession.completed = false;
           state.currentSession.elapsedAtSave = state.elapsed;
@@ -3444,6 +3951,7 @@
           model: state.currentModel,
           title: "",
           groupId: "",
+          color: SESSION_COLORS.includes(color) ? color : "",
           comment: "",
           startedAt: new Date().toISOString(),
           entries: [],
@@ -3686,6 +4194,7 @@
         <span class="session-num">${statusLabel} · <span class="session-primary-label">${escHtml(getSessionLabel(session))}</span></span>
         ${session.title ? `<span class="session-time-tag">${summary.startedAt}</span>` : ""}
         ${session.model ? `<span class="session-model-tag">${escHtml(session.model)}</span>` : ""}
+        ${session.color ? `<span class="session-color-tag ${session.color}">● ${session.color.toUpperCase()}</span>` : ""}
         ${groupName ? `<span class="session-group-tag">${escHtml(groupName)}</span>` : ""}
         ${session.comment ? '<span class="session-comment-tag">COMMENT</span>' : ""}
         <span class="session-time-tag">${formatTime(summary.elapsed)}</span>
@@ -3825,6 +4334,146 @@
           { kind: "history-delete", session: deletedSession, index },
           `Deleted ${getSessionLabel(deletedSession)}`,
         );
+      }
+
+      function showDeleteSelectedModal() {
+        const count = state.selectedSessionIds.length;
+        if (!count) return;
+        document.getElementById("delete-selected-count").textContent =
+          `${count} session${count === 1 ? "" : "s"} selected`;
+        document
+          .getElementById("delete-selected-modal")
+          .classList.add("visible");
+        updateModalScrollLock();
+        document.getElementById("delete-selected-confirm").focus();
+      }
+
+      function hideDeleteSelectedModal() {
+        document
+          .getElementById("delete-selected-modal")
+          .classList.remove("visible");
+        updateModalScrollLock();
+      }
+
+      function deleteSelectedSessions() {
+        const ids = new Set(state.selectedSessionIds);
+        if (!ids.size) return;
+        const removedArchived = [];
+        state.sessions = state.sessions.filter((session, index) => {
+          if (!ids.has(session.id)) return true;
+          removedArchived.push({ session: cloneSession(session), index });
+          return false;
+        });
+        let removedCurrent = null;
+        if (state.currentSession && ids.has(state.currentSession.id)) {
+          pauseTimer();
+          removedCurrent = cloneSession({
+            ...state.currentSession,
+            elapsedAtSave: state.elapsed,
+          });
+          state.currentSession = null;
+          state.elapsed = 0;
+          updateTimerDisplay();
+          updateStats();
+          updateButtons(false);
+          updateTitleUI();
+        }
+        const removedCount =
+          removedArchived.length + (removedCurrent ? 1 : 0);
+        if (!removedCount) return;
+        state.selectedSessionIds = [];
+        closeSelectionSummaryModal();
+        save();
+        renderHistory();
+        queueUndo(
+          { kind: "bulk-delete", removedArchived, removedCurrent },
+          `Deleted ${removedCount} session${removedCount === 1 ? "" : "s"}`,
+        );
+      }
+
+      function openNewSessionModal() {
+        document.getElementById("new-session-modal").classList.add("visible");
+        updateModalScrollLock();
+      }
+
+      function closeNewSessionModal() {
+        document
+          .getElementById("new-session-modal")
+          .classList.remove("visible");
+        updateModalScrollLock();
+      }
+
+      function getGroupSessionCount(groupId) {
+        return getAllRenderableSessions().filter(
+          (session) => session.groupId === groupId,
+        ).length;
+      }
+
+      function populateDeleteGroupSelect() {
+        const select = document.getElementById("delete-group-select");
+        select.innerHTML =
+          '<option value="">SELECT A GROUP</option>' +
+          state.groups
+            .map((group) => {
+              const count = getGroupSessionCount(group.id);
+              return `<option value="${escHtml(group.id)}">${escHtml(group.name)} (${count} SESSION${count === 1 ? "" : "S"})</option>`;
+            })
+            .join("");
+      }
+
+      function updateDeleteGroupModalState() {
+        const select = document.getElementById("delete-group-select");
+        const note = document.getElementById("delete-group-note");
+        const confirmBtn = document.getElementById("delete-group-confirm");
+        const groupId = select.value;
+        if (!groupId) {
+          note.textContent = state.groups.length
+            ? "Only empty groups can be deleted."
+            : "No groups exist yet.";
+          note.classList.remove("error");
+          confirmBtn.disabled = true;
+          return;
+        }
+        const count = getGroupSessionCount(groupId);
+        if (count > 0) {
+          note.textContent = `This group still has ${count} session${count === 1 ? "" : "s"}. Move or delete them first.`;
+          note.classList.add("error");
+          confirmBtn.disabled = true;
+        } else {
+          note.textContent = "This group is empty and can be deleted.";
+          note.classList.remove("error");
+          confirmBtn.disabled = false;
+        }
+      }
+
+      function openDeleteGroupModal() {
+        populateDeleteGroupSelect();
+        updateDeleteGroupModalState();
+        document.getElementById("delete-group-modal").classList.add("visible");
+        updateModalScrollLock();
+        document.getElementById("delete-group-select").focus();
+      }
+
+      function closeDeleteGroupModal() {
+        document
+          .getElementById("delete-group-modal")
+          .classList.remove("visible");
+        updateModalScrollLock();
+      }
+
+      function confirmDeleteGroup() {
+        const groupId = document.getElementById("delete-group-select").value;
+        if (!groupId) return;
+        if (getGroupSessionCount(groupId) > 0) {
+          updateDeleteGroupModalState();
+          return;
+        }
+        state.groups = state.groups.filter((group) => group.id !== groupId);
+        if (state.historyGroupFilter === groupId)
+          state.historyGroupFilter = "all";
+        save();
+        closeDeleteGroupModal();
+        renderHistory();
       }
 
       function escHtml(str) {
@@ -4144,6 +4793,36 @@
           state.sessions.splice(index, 0, normalizeSession(payload.session));
           save();
           renderHistory();
+          return;
+        }
+        if (payload.kind === "bulk-delete") {
+          [...payload.removedArchived]
+            .sort((a, b) => a.index - b.index)
+            .forEach(({ session, index }) => {
+              state.sessions.splice(
+                Math.max(0, Math.min(index, state.sessions.length)),
+                0,
+                normalizeSession(session),
+              );
+            });
+          if (payload.removedCurrent) {
+            if (state.currentSession) {
+              state.currentSession.completed = false;
+              state.currentSession.elapsedAtSave = state.elapsed;
+              archiveCurrentSession();
+            }
+            pauseTimer();
+            state.currentSession = normalizeSession(payload.removedCurrent);
+            state.elapsed = payload.removedCurrent.elapsedAtSave || 0;
+            state.running = false;
+            updateTimerDisplay();
+            updateStats();
+            updateButtons(false);
+            updateTitleUI();
+            updateModelUI();
+          }
+          save();
+          renderHistory();
         }
       }
 
@@ -4180,12 +4859,11 @@
             title: session.title || "",
             display_label: getSessionLabel(session),
             model: session.model || "",
+            color: session.color || "",
             group: getGroupName(session.groupId),
             comment: session.comment || "",
             started_at: session.startedAt || "",
-            target_duration_seconds: sanitizeDuration(
-              session.targetDuration || state.sessionDuration,
-            ),
+            target_duration_seconds: getSessionTargetDuration(session),
             duration_seconds: summary.elapsed,
             duration_display: formatTime(summary.elapsed),
             successes: summary.successes,
@@ -4255,9 +4933,7 @@
               ? state.elapsed
               : session.elapsedAtSave || 0,
             groupName: getGroupName(session.groupId),
-            targetDuration: sanitizeDuration(
-              session.targetDuration || state.sessionDuration,
-            ),
+            targetDuration: getSessionTargetDuration(session),
             wilsonLower: Number(summary.wilsonLower.toFixed(6)),
             qualityConfidence: Number(summary.qualityConfidence.toFixed(6)),
             riskConfidence: Number(summary.riskConfidence.toFixed(6)),
@@ -4297,7 +4973,25 @@
       document
         .getElementById("btn-erase")
         .addEventListener("click", showEraseModal);
-      document.getElementById("btn-new").addEventListener("click", newSession);
+      document
+        .getElementById("btn-new")
+        .addEventListener("click", openNewSessionModal);
+
+      document.querySelectorAll("[data-session-color]").forEach((button) => {
+        button.addEventListener("click", () => {
+          closeNewSessionModal();
+          newSession(button.dataset.sessionColor);
+        });
+      });
+      document
+        .getElementById("new-session-cancel")
+        .addEventListener("click", closeNewSessionModal);
+      document
+        .getElementById("new-session-modal")
+        .addEventListener("click", (event) => {
+          if (event.target === document.getElementById("new-session-modal"))
+            closeNewSessionModal();
+        });
 
       document.getElementById("btn-success").addEventListener("click", () => {
         recordVerdict("success");
@@ -4378,6 +5072,27 @@
             .classList.contains("visible")
         ) {
           closeSelectionSummaryModal();
+        } else if (
+          event.key === "Escape" &&
+          document
+            .getElementById("new-session-modal")
+            .classList.contains("visible")
+        ) {
+          closeNewSessionModal();
+        } else if (
+          event.key === "Escape" &&
+          document
+            .getElementById("delete-group-modal")
+            .classList.contains("visible")
+        ) {
+          closeDeleteGroupModal();
+        } else if (
+          event.key === "Escape" &&
+          document
+            .getElementById("delete-selected-modal")
+            .classList.contains("visible")
+        ) {
+          hideDeleteSelectedModal();
         } else if (
           (event.key === "z" || event.key === "Z") &&
           (event.metaKey || event.ctrlKey) &&
@@ -4479,6 +5194,44 @@
       document
         .getElementById("new-group-btn")
         .addEventListener("click", () => openGroupModal("create"));
+      document
+        .getElementById("delete-group-btn")
+        .addEventListener("click", openDeleteGroupModal);
+      document
+        .getElementById("delete-group-cancel")
+        .addEventListener("click", closeDeleteGroupModal);
+      document
+        .getElementById("delete-group-confirm")
+        .addEventListener("click", confirmDeleteGroup);
+      document
+        .getElementById("delete-group-select")
+        .addEventListener("change", updateDeleteGroupModalState);
+      document
+        .getElementById("delete-group-modal")
+        .addEventListener("click", (event) => {
+          if (event.target === document.getElementById("delete-group-modal"))
+            closeDeleteGroupModal();
+        });
+      document
+        .getElementById("delete-selected-btn")
+        .addEventListener("click", showDeleteSelectedModal);
+      document
+        .getElementById("delete-selected-cancel")
+        .addEventListener("click", hideDeleteSelectedModal);
+      document
+        .getElementById("delete-selected-confirm")
+        .addEventListener("click", () => {
+          hideDeleteSelectedModal();
+          deleteSelectedSessions();
+        });
+      document
+        .getElementById("delete-selected-modal")
+        .addEventListener("click", (event) => {
+          if (
+            event.target === document.getElementById("delete-selected-modal")
+          )
+            hideDeleteSelectedModal();
+        });
 
       document.querySelectorAll("[data-export]").forEach((button) => {
         button.addEventListener("click", () =>
@@ -4561,6 +5314,18 @@
           refreshSelectionSummaryModal();
         });
       document
+        .getElementById("selection-summary-view-models")
+        .addEventListener("click", () => {
+          summaryViewMode = "models";
+          refreshSelectionSummaryModal();
+        });
+      document
+        .getElementById("selection-summary-model-sort")
+        .addEventListener("change", (event) => {
+          summaryModelSort = event.target.value;
+          refreshSelectionSummaryModal();
+        });
+      document
         .getElementById("selection-summary-modal")
         .addEventListener("click", (event) => {
           if (
@@ -4592,3 +5357,4 @@
     </script>
   </body>
 </html>
+
