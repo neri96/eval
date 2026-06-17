@@ -12,6 +12,7 @@ import type { SliceCreator } from "../evalStore";
  * `restoreRemoved` re-inserts removed sessions, reaching into the sessions slice.
  */
 export type UiSlice = {
+  currentTicketId: string | null;
   summaryView: SummaryView;
   summaryGraphMetric: SummaryGraphMetric;
   activeModal: ModalName;
@@ -19,6 +20,7 @@ export type UiSlice = {
   ticketModalMode: "create" | "assign";
   recentlyRemoved: RemovedSnapshot | null;
 
+  setCurrentTicketId: (ticketId: string | null) => void;
   setSummaryView: (view: SummaryView) => void;
   setSummaryGraphMetric: (metric: SummaryGraphMetric) => void;
   openModal: (modal: ModalName, sessionId?: string | null) => void;
@@ -29,12 +31,18 @@ export type UiSlice = {
 };
 
 export const createUiSlice: SliceCreator<UiSlice> = (set, get) => ({
+  currentTicketId: null,
   summaryView: "list",
   summaryGraphMetric: "score",
   activeModal: null,
   modalSessionId: null,
   ticketModalMode: "create",
   recentlyRemoved: null,
+
+  setCurrentTicketId: (ticketId) =>
+    set((state) => {
+      state.currentTicketId = ticketId;
+    }),
 
   setSummaryView: (view) =>
     set((state) => {
@@ -67,8 +75,7 @@ export const createUiSlice: SliceCreator<UiSlice> = (set, get) => ({
   restoreRemoved: () => {
     const snapshot = get().recentlyRemoved;
     if (!snapshot) return;
-    // Clone outside the recipe — `session` is a plain finalized object here,
-    // not an immer draft Proxy (structuredClone throws on Proxies).
+
     const items = [...snapshot.items]
       .sort((a, b) => a.index - b.index)
       .map(({ session, index, wasCurrent }) => {

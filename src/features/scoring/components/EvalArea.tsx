@@ -3,7 +3,12 @@ import { useEvalStore } from "@/store/evalStore";
 import { selectCurrentSession, getSessionStats } from "@/store/selectors";
 import styles from "./EvalArea.module.css";
 
-const EMPTY_STATS = { successes: 0, fails: 0, total: 0, score: null as number | null };
+const EMPTY_STATS = {
+  successes: 0,
+  fails: 0,
+  total: 0,
+  score: null as number | null,
+};
 
 export function EvalArea() {
   const current = useEvalStore(selectCurrentSession);
@@ -16,6 +21,7 @@ export function EvalArea() {
   // Flash the verdict button when its tally grows — works for clicks and keys.
   const [flash, setFlash] = useState<"success" | "fail" | null>(null);
   const prev = useRef({ successes: 0, fails: 0 });
+
   useEffect(() => {
     if (stats.successes > prev.current.successes) setFlash("success");
     else if (stats.fails > prev.current.fails) setFlash("fail");

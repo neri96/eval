@@ -1,4 +1,9 @@
-import type { AnomalyKind, EvalSession, HistorySort } from "@/shared/types";
+import type {
+  AnomalyKind,
+  EvalSession,
+  HistorySort,
+  Ticket,
+} from "@/shared/types";
 import { elapsedOf } from "./helpers";
 import type { EvalStore } from "./evalStore";
 
@@ -9,7 +14,7 @@ import type { EvalStore } from "./evalStore";
 
 export const selectCurrentSession = (state: EvalStore): EvalSession | null =>
   state.currentSessionId
-    ? state.sessions.find((s) => s.id === state.currentSessionId) ?? null
+    ? (state.sessions.find((s) => s.id === state.currentSessionId) ?? null)
     : null;
 
 export const selectCurrentElapsedMs = (state: EvalStore): number => {
@@ -153,7 +158,10 @@ function compareByDate(
   return direction === "desc" ? bt - at : at - bt;
 }
 
-function sortSessions(sessions: EvalSession[], sort: HistorySort): EvalSession[] {
+function sortSessions(
+  sessions: EvalSession[],
+  sort: HistorySort,
+): EvalSession[] {
   const withMeta = sessions.map((session) => ({
     session,
     metrics: getSessionMetrics(session),
@@ -227,4 +235,11 @@ export function selectFilteredSessions(state: EvalStore): EvalSession[] {
       matchesTicket(state, session),
   );
   return sortSessions(filtered, state.historySort);
+}
+
+export function selectCurrentTicket(state: EvalStore): Ticket | null {
+  return state.currentTicketId
+    ? (state.tickets.find((ticket) => ticket.id === state.currentTicketId) ??
+        null)
+    : null;
 }

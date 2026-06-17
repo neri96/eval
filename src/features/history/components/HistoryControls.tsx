@@ -171,13 +171,6 @@ export function HistoryControls() {
           </button>
           <button
             type="button"
-            className={styles.utilityBtn}
-            onClick={() => openTicketModal("create")}
-          >
-            NEW TICKET
-          </button>
-          <button
-            type="button"
             className={`${styles.utilityBtn} ${styles.danger}`}
             onClick={() => openModal("deleteTicket")}
           >

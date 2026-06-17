@@ -10,7 +10,7 @@ import type { SliceCreator } from "../evalStore";
 export type TicketsSlice = {
   tickets: Ticket[];
 
-  createTicket: (name: string, operators?: string[]) => void;
+  createTicket: (name: string, operators?: string[]) => string | null;
   assignSessionsToTicket: (
     sessionIds: string[],
     ticketId: string | null,
@@ -22,7 +22,8 @@ export type TicketsSlice = {
 export const createTicketsSlice: SliceCreator<TicketsSlice> = (set) => ({
   tickets: [],
 
-  createTicket: (name, operators = []) =>
+  createTicket: (name, operators = []) => {
+    let ticketId: string | null = null;
     set((state) => {
       const cleaned = name.trim();
       if (!cleaned) return;
@@ -32,16 +33,20 @@ export const createTicketsSlice: SliceCreator<TicketsSlice> = (set) => ({
       );
       if (existing) {
         existing.operators = ops;
+        ticketId = existing.id;
       } else {
+        ticketId = createId("ticket");
         state.tickets.push({
-          id: createId("ticket"),
+          id: ticketId,
           name: cleaned,
           operators: ops,
           createdAt: now(),
         });
       }
       state.tickets.sort((a, b) => a.name.localeCompare(b.name));
-    }),
+    });
+    return ticketId;
+  },
 
   assignSessionsToTicket: (sessionIds, ticketId) =>
     set((state) => {

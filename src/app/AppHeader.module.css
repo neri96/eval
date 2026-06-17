@@ -3,6 +3,7 @@
   padding: 10px 24px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 16px;
   background: var(--surface);
 }
@@ -14,4 +15,32 @@
   letter-spacing: 0.25em;
   color: var(--accent);
   text-transform: uppercase;
+}
+
+.newTicketBtn {
+  margin-left: auto;
+}
+
+.utilityBtn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--text-dim);
+  transition: all 0.15s;
+  padding: 4px 8px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
+.utilityBtn:hover {
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.utilityBtn:active {
+  transform: scale(0.95);
 }

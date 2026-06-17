@@ -22,6 +22,7 @@ function TicketModalBody() {
   const updateTicketOperators = useEvalStore(
     (state) => state.updateTicketOperators,
   );
+  const setCurrentTicketId = useEvalStore((state) => state.setCurrentTicketId);
   const closeModal = useEvalStore((state) => state.closeModal);
 
   const [selectId, setSelectId] = useState("");
@@ -40,20 +41,15 @@ function TicketModalBody() {
 
     if (mode === "create") {
       if (!cleanedName) return;
-      createTicket(cleanedName, ops);
+      const ticketId = createTicket(cleanedName, ops);
+      setCurrentTicketId(ticketId);
       closeModal();
       return;
     }
 
     let ticketId: string | null;
     if (cleanedName) {
-      createTicket(cleanedName, ops);
-      ticketId =
-        useEvalStore
-          .getState()
-          .tickets.find(
-            (item) => item.name.toLowerCase() === cleanedName.toLowerCase(),
-          )?.id ?? null;
+      ticketId = createTicket(cleanedName, ops);
     } else if (selectId === "ungrouped") {
       ticketId = null;
     } else if (selectId) {
