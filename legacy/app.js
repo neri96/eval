@@ -1,0 +1,2855 @@
+const DEFAULT_SESSION_DURATION = 5 * 60;
+const UNLIMITED_DURATION = 0;
+const DURATION_PRESETS = [300, 600, 900, UNLIMITED_DURATION];
+const SESSION_COLORS = ["red", "yellow", "blue"];
+const EVENT_TYPES = [
+  { id: "collision", label: "Collision", key: "c" },
+  { id: "dropped", label: "Dropped", key: "d" },
+  { id: "phantom", label: "Phantom", key: "p" },
+  { id: "shaky", label: "Shaky", key: "s" },
+  { id: "random", label: "Random", key: "r" },
+];
+const EVENT_IDS = EVENT_TYPES.map((type) => type.id);
+const MIN_DURATION_SECONDS = 60;
+const MAX_DURATION_SECONDS = 3 * 60 * 60;
+const STORAGE_KEY = "robot_eval_v6";
+const FALLBACK_STORAGE_KEYS = [
+  "robot_eval_v5",
+  "robot_eval_v4",
+  "robot_eval_v3",
+  "robot_eval_v2",
+];
+const UNDO_WINDOW_MS = 5000;
+const WILSON_Z = 1.96;
+const LOCALSTORAGE_ESTIMATED_QUOTA_BYTES = 5 * 1024 * 1024;
+const LOCALSTORAGE_PRUNE_THRESHOLD = 0.8;
+const MIN_STORAGE_BUDGET_BYTES = 64 * 1024;
+const COMMENT_MAX_LENGTH = 280;
+
+let state = {
+  running: false,
+  elapsed: 0,
+  currentSession: null,
+  sessions: [],
+  currentModel: "",
+  sessionDuration: DEFAULT_SESSION_DURATION,
+  historyFilter: "all",
+  historyQuery: "",
+  historyTicketFilter: "all",
+  historySort: "newest",
+  selectMode: false,
+  selectedSessionIds: [],
+  tickets: [],
+};
+
+let timerInterval = null;
+let undoState = null;
+let renameTargetId = null;
+let ticketModalMode = "create";
+let ticketModalTargetId = null;
+let summaryClipboardText = "";
+let summaryGraphMetric = "score";
+let summaryViewMode = "list";
+let summaryCurrentRows = [];
+let summaryModelRows = [];
+let summarySessionSort = { key: "score", dir: "desc" };
+let summaryModelSort = { key: "confidence", dir: "desc" };
+const SUMMARY_ASC_DEFAULT_KEYS = new Set(["model", "color", "events"]);
+
+function sanitizeDuration(seconds) {
+  const numeric = Number(seconds);
+  if (!Number.isFinite(numeric)) return DEFAULT_SESSION_DURATION;
+  if (numeric === UNLIMITED_DURATION) return UNLIMITED_DURATION;
+  return Math.min(
+    MAX_DURATION_SECONDS,
+    Math.max(MIN_DURATION_SECONDS, Math.round(numeric)),
+  );
+}
+
+function sanitizeComment(comment) {
+  return String(comment || "")
+    .slice(0, COMMENT_MAX_LENGTH)
+    .trim();
+}
+
+function cloneSession(session) {
+  return {
+    ...session,
+    entries: Array.isArray(session.entries)
+      ? session.entries.map((entry) => ({ ...entry }))
+      : [],
+  };
+}
+
+function normalizeSession(session) {
+  const normalized = cloneSession(session || {});
+  normalized.id =
+    normalized.id || `${Date.now()}_${Math.random().toString(16).slice(2, 8)}`;
+  normalized.model = String(normalized.model || "").trim();
+  normalized.title = String(normalized.title || "").trim();
+  normalized.ticketId = String(
+    normalized.ticketId || normalized.groupId || "",
+  ).trim();
+  delete normalized.groupId;
+  normalized.color = SESSION_COLORS.includes(normalized.color)
+    ? normalized.color
+    : "";
+  normalized.comment = sanitizeComment(normalized.comment);
+  normalized.startedAt = normalized.startedAt || new Date().toISOString();
+  normalized.completed = Boolean(normalized.completed);
+  normalized.elapsedAtSave = Number.isFinite(Number(normalized.elapsedAtSave))
+    ? Number(normalized.elapsedAtSave)
+    : 0;
+  normalized.targetDuration = sanitizeDuration(
+    normalized.targetDuration === UNLIMITED_DURATION
+      ? UNLIMITED_DURATION
+      : normalized.targetDuration ||
+          (state.sessionDuration === UNLIMITED_DURATION
+            ? UNLIMITED_DURATION
+            : state.sessionDuration || DEFAULT_SESSION_DURATION),
+  );
+  normalized.entries = Array.isArray(normalized.entries)
+    ? normalized.entries.map((entry) => {
+        if (entry.type === "event") {
+          return {
+            type: "event",
+            name: EVENT_IDS.includes(entry.name) ? entry.name : "random",
+            ts: String(entry.ts || "00:00"),
+          };
+        }
+        return {
+          type: entry.type === "fail" ? "fail" : "success",
+          ts: String(entry.ts || "00:00"),
+        };
+      })
+    : [];
+  return normalized;
+}
+
+function parseOperators(raw) {
+  return [
+    ...new Set(
+      String(raw || "")
+        .split(",")
+        .map((name) => name.trim())
+        .filter(Boolean),
+    ),
+  ].slice(0, 20);
+}
+
+function normalizeTicket(ticket) {
+  return {
+    id: String(
+      ticket.id || `${Date.now()}_${Math.random().toString(16).slice(2, 8)}`,
+    ),
+    name: String(ticket.name || "").trim(),
+    operators: Array.isArray(ticket.operators)
+      ? parseOperators(ticket.operators.join(","))
+      : [],
+    createdAt: ticket.createdAt || new Date().toISOString(),
+  };
+}
+
+function buildStoragePayload() {
+  return {
+    sessions: state.sessions,
+    currentSession: state.currentSession,
+    elapsed: state.elapsed,
+    currentModel: state.currentModel,
+    sessionDuration: state.sessionDuration,
+    historyFilter: state.historyFilter,
+    historyQuery: state.historyQuery,
+    historyTicketFilter: state.historyTicketFilter,
+    historySort: state.historySort,
+    tickets: state.tickets,
+  };
+}
+
+function estimateBytes(text) {
+  return new Blob([String(text || "")]).size;
+}
+
+function getOtherLocalStorageUsageBytes() {
+  let total = 0;
+  for (let index = 0; index < localStorage.length; index += 1) {
+    const key = localStorage.key(index);
+    if (!key || key === STORAGE_KEY) continue;
+    const value = localStorage.getItem(key);
+    total += estimateBytes(key) + estimateBytes(value || "");
+  }
+  return total;
+}
+
+function getStorageBudgetBytes() {
+  const targetBudget = Math.floor(
+    LOCALSTORAGE_ESTIMATED_QUOTA_BYTES * LOCALSTORAGE_PRUNE_THRESHOLD,
+  );
+  const remaining = targetBudget - getOtherLocalStorageUsageBytes();
+  return Math.max(MIN_STORAGE_BUDGET_BYTES, remaining);
+}
+
+function getOldestArchivedSessionIndex() {
+  if (!state.sessions.length) return -1;
+  let oldestIndex = 0;
+  let oldestTime = Number.POSITIVE_INFINITY;
+  state.sessions.forEach((session, index) => {
+    const parsedTime = new Date(session.startedAt || 0).getTime();
+    const safeTime = Number.isFinite(parsedTime) ? parsedTime : 0;
+    if (safeTime < oldestTime) {
+      oldestTime = safeTime;
+      oldestIndex = index;
+    }
+  });
+  return oldestIndex;
+}
+
+function pruneOldestArchivedSession() {
+  const index = getOldestArchivedSessionIndex();
+  if (index < 0) return null;
+  const [removed] = state.sessions.splice(index, 1);
+  state.selectedSessionIds = state.selectedSessionIds.filter(
+    (id) => id !== removed.id,
+  );
+  return removed;
+}
+
+function pruneArchivedSessionsToBudget(initialSerialized, budgetBytes) {
+  let serialized = initialSerialized;
+  let removedCount = 0;
+  while (estimateBytes(serialized) > budgetBytes && state.sessions.length) {
+    const removed = pruneOldestArchivedSession();
+    if (!removed) break;
+    removedCount += 1;
+    serialized = JSON.stringify(buildStoragePayload());
+  }
+  return { serialized, removedCount };
+}
+
+function isQuotaExceeded(error) {
+  if (!error) return false;
+  return (
+    error.name === "QuotaExceededError" ||
+    error.code === 22 ||
+    error.code === 1014
+  );
+}
+
+function save() {
+  let serialized = JSON.stringify(buildStoragePayload());
+  const budgetBytes = getStorageBudgetBytes();
+
+  const preemptivePrune = pruneArchivedSessionsToBudget(
+    serialized,
+    budgetBytes,
+  );
+  serialized = preemptivePrune.serialized;
+  if (preemptivePrune.removedCount > 0) {
+    console.warn(
+      `[storage] Pruned ${preemptivePrune.removedCount} old session(s) at ${Math.round(LOCALSTORAGE_PRUNE_THRESHOLD * 100)}% budget.`,
+    );
+  }
+
+  try {
+    localStorage.setItem(STORAGE_KEY, serialized);
+    return;
+  } catch (error) {
+    if (!isQuotaExceeded(error)) {
+      console.warn("Save error", error);
+      return;
+    }
+  }
+
+  let fallbackRemoved = 0;
+  while (state.sessions.length) {
+    const removed = pruneOldestArchivedSession();
+    if (!removed) break;
+    fallbackRemoved += 1;
+    serialized = JSON.stringify(buildStoragePayload());
+    try {
+      localStorage.setItem(STORAGE_KEY, serialized);
+      if (fallbackRemoved > 0) {
+        console.warn(
+          `[storage] Quota fallback removed ${fallbackRemoved} old session(s).`,
+        );
+      }
+      return;
+    } catch (error) {
+      if (!isQuotaExceeded(error)) {
+        console.warn("Save error", error);
+        return;
+      }
+    }
+  }
+
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(buildStoragePayload()));
+  } catch (error) {
+    console.warn("Save failed after pruning sessions.", error);
+  }
+}
+
+function load() {
+  try {
+    const raw =
+      localStorage.getItem(STORAGE_KEY) ||
+      FALLBACK_STORAGE_KEYS.map((key) => localStorage.getItem(key)).find(
+        Boolean,
+      );
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    state.sessionDuration = sanitizeDuration(
+      parsed.sessionDuration === UNLIMITED_DURATION
+        ? UNLIMITED_DURATION
+        : parsed.sessionDuration || DEFAULT_SESSION_DURATION,
+    );
+    state.sessions = Array.isArray(parsed.sessions)
+      ? parsed.sessions.map(normalizeSession)
+      : [];
+    state.currentSession = parsed.currentSession
+      ? normalizeSession(parsed.currentSession)
+      : null;
+    state.elapsed = Number.isFinite(Number(parsed.elapsed))
+      ? Number(parsed.elapsed)
+      : 0;
+    state.currentModel = String(parsed.currentModel || "").trim();
+    state.historyFilter = parsed.historyFilter || "all";
+    state.historyQuery = parsed.historyQuery || "";
+    state.historyTicketFilter =
+      parsed.historyTicketFilter || parsed.historyGroupFilter || "all";
+    state.historySort = parsed.historySort || "newest";
+    const storedTickets = Array.isArray(parsed.tickets)
+      ? parsed.tickets
+      : Array.isArray(parsed.groups)
+        ? parsed.groups
+        : [];
+    state.tickets = storedTickets
+      .map(normalizeTicket)
+      .filter((ticket) => ticket.name);
+    state.running = false;
+    dedupeTickets();
+    syncTicketsFromSessions();
+  } catch (error) {
+    console.warn("Load error", error);
+  }
+}
+
+function dedupeTickets() {
+  const seen = new Set();
+  state.tickets = state.tickets.filter((group) => {
+    const key = group.name.trim().toLowerCase();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function syncTicketsFromSessions() {
+  const allSessions = [];
+  if (state.currentSession) allSessions.push(state.currentSession);
+  allSessions.push(...state.sessions);
+  allSessions.forEach((session) => {
+    if (!session.ticketId) return;
+    const group = state.tickets.find((item) => item.id === session.ticketId);
+    if (!group) session.ticketId = "";
+  });
+}
+
+function getCurrentDuration() {
+  if (state.currentSession) {
+    const target = state.currentSession.targetDuration;
+    return sanitizeDuration(
+      target === UNLIMITED_DURATION
+        ? UNLIMITED_DURATION
+        : target || state.sessionDuration,
+    );
+  }
+  return sanitizeDuration(state.sessionDuration);
+}
+
+function getSessionTargetDuration(session) {
+  const target = session.targetDuration;
+  return sanitizeDuration(
+    target === UNLIMITED_DURATION
+      ? UNLIMITED_DURATION
+      : target || state.sessionDuration,
+  );
+}
+
+function updateDurationUI() {
+  const timerLabel = document.getElementById("timer-label");
+  const duration = getCurrentDuration();
+  const durationLabel =
+    duration === UNLIMITED_DURATION ? "UNLIMITED" : formatTime(duration);
+  const sessionColor =
+    state.currentSession && state.currentSession.color
+      ? state.currentSession.color
+      : "";
+  timerLabel.innerHTML = `SESSION TIMER · ${durationLabel}${
+    sessionColor
+      ? ` · <span class="timer-session-color ${sessionColor}">● ${sessionColor.toUpperCase()}</span>`
+      : ""
+  }`;
+
+  document.querySelectorAll(".duration-btn").forEach((button) => {
+    const duration = Number(button.dataset.duration);
+    button.classList.toggle("active", duration === state.sessionDuration);
+  });
+
+  const locked = state.running || state.elapsed > 0;
+  document.querySelectorAll(".duration-btn").forEach((button) => {
+    button.disabled = locked;
+  });
+  document.getElementById("duration-input").disabled = locked;
+  document.getElementById("duration-set-btn").disabled = locked;
+}
+
+function setDefaultDuration(seconds) {
+  if (state.running || state.elapsed > 0) return;
+  const duration = sanitizeDuration(seconds);
+  state.sessionDuration = duration;
+  if (state.currentSession && state.elapsed === 0) {
+    state.currentSession.targetDuration = duration;
+  }
+  updateDurationUI();
+  updateTimerDisplay();
+  save();
+}
+
+function startTimer() {
+  if (timerInterval || !state.currentSession) return;
+  state.running = true;
+  timerInterval = setInterval(() => {
+    state.elapsed += 1;
+    updateTimerDisplay();
+    const duration = getCurrentDuration();
+    if (duration !== UNLIMITED_DURATION && state.elapsed >= duration)
+      completeSession();
+  }, 1000);
+}
+
+function pauseTimer() {
+  clearInterval(timerInterval);
+  timerInterval = null;
+  state.running = false;
+  save();
+}
+
+function formatTime(secs) {
+  const safe = Math.max(0, Number.isFinite(secs) ? Math.floor(secs) : 0);
+  const m = Math.floor(safe / 60)
+    .toString()
+    .padStart(2, "0");
+  const s = (safe % 60).toString().padStart(2, "0");
+  return `${m}:${s}`;
+}
+
+function updateTimerDisplay() {
+  const duration = getCurrentDuration();
+  const display = document.getElementById("timer-display");
+  const bar = document.getElementById("progress-bar");
+  display.className = "";
+  bar.className = "";
+  if (duration === UNLIMITED_DURATION) {
+    display.textContent = formatTime(state.elapsed);
+    bar.style.width = state.currentSession ? "100%" : "0%";
+    updateDurationUI();
+    return;
+  }
+  const remaining = Math.max(0, duration - state.elapsed);
+  display.textContent = formatTime(remaining);
+  bar.style.width = `${Math.min((state.elapsed / duration) * 100, 100)}%`;
+  if (remaining <= 30 && remaining > 0) {
+    display.classList.add("danger");
+    bar.classList.add("danger");
+  } else if (remaining <= Math.min(60, Math.floor(duration * 0.2))) {
+    display.classList.add("warn");
+    bar.classList.add("warn");
+  }
+  updateDurationUI();
+}
+
+function getSessionStatus(session) {
+  if (session._active) return "active";
+  return session.completed ? "done" : "stopped";
+}
+
+function getSessionLabel(session) {
+  if (!session) return "SESSION";
+  if (session.title) return session.title;
+  if (session.startedAt) {
+    return new Date(session.startedAt).toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+  return "UNTITLED SESSION";
+}
+
+function getTicketById(ticketId) {
+  if (!ticketId) return null;
+  return state.tickets.find((item) => item.id === ticketId) || null;
+}
+
+function getTicketName(ticketId) {
+  const ticket = getTicketById(ticketId);
+  return ticket ? ticket.name : "";
+}
+
+function ensureTicket(name) {
+  const cleaned = String(name || "").trim();
+  if (!cleaned) return "";
+  const existing = state.tickets.find(
+    (group) => group.name.toLowerCase() === cleaned.toLowerCase(),
+  );
+  if (existing) return existing.id;
+  const group = normalizeTicket({ name: cleaned });
+  state.tickets.push(group);
+  state.tickets.sort((a, b) => a.name.localeCompare(b.name));
+  return group.id;
+}
+
+function getStoredSessionById(id) {
+  if (state.currentSession && state.currentSession.id === id)
+    return state.currentSession;
+  return state.sessions.find((session) => session.id === id) || null;
+}
+
+function setSessionTicket(id, ticketId) {
+  const session = getStoredSessionById(id);
+  if (!session) return;
+  session.ticketId = ticketId;
+  save();
+  renderHistory();
+}
+
+function setSessionComment(id, comment) {
+  const session = getStoredSessionById(id);
+  if (!session) return;
+  const sanitized = sanitizeComment(comment);
+  if (session.comment === sanitized) return;
+  session.comment = sanitized;
+  save();
+}
+
+function getScoreClass(score) {
+  if (score === null) return "";
+  if (score >= 70) return "summary-score-good";
+  if (score >= 40) return "summary-score-mid";
+  return "summary-score-bad";
+}
+
+function getSummaryTargetSessions() {
+  if (state.selectedSessionIds.length)
+    return getSessionsByIds(state.selectedSessionIds);
+  return getFilteredRenderableSessions();
+}
+
+function getSummaryBaseRows() {
+  return getSummaryTargetSessions().map((session) => {
+    const summary = getSessionSummary(session);
+    return {
+      session,
+      summary,
+      model: session.model || "",
+      comment: session.comment || "",
+      scoreSort: summary.score === null ? -1 : summary.score,
+    };
+  });
+}
+
+function sortSelectionSummaryRows(rows, sortMode = "best") {
+  const sorted = [...rows];
+  if (sortMode === "recent") {
+    sorted.sort((left, right) =>
+      compareByDate(left.session, right.session, "desc"),
+    );
+    return sorted;
+  }
+  if (sortMode === "fastest") {
+    sorted.sort((left, right) => {
+      const rateCmp = compareNumbersDesc(
+        left.summary.ratePerMinute,
+        right.summary.ratePerMinute,
+      );
+      if (rateCmp !== 0) return rateCmp;
+      if (right.summary.total !== left.summary.total)
+        return right.summary.total - left.summary.total;
+      const scoreCmp = compareNumbersDesc(left.scoreSort, right.scoreSort);
+      if (scoreCmp !== 0) return scoreCmp;
+      return compareByDate(left.session, right.session, "desc");
+    });
+    return sorted;
+  }
+  sorted.sort((left, right) => {
+    const scoreCmp = compareNumbersDesc(left.scoreSort, right.scoreSort);
+    if (scoreCmp !== 0) return scoreCmp;
+    const qualityCmp = compareNumbersDesc(
+      left.summary.qualityConfidence,
+      right.summary.qualityConfidence,
+    );
+    if (qualityCmp !== 0) return qualityCmp;
+    if (right.summary.total !== left.summary.total)
+      return right.summary.total - left.summary.total;
+    return compareByDate(left.session, right.session, "desc");
+  });
+  return sorted;
+}
+
+function renderSelectionMetrics(rows) {
+  const bestRow = sortSelectionSummaryRows(rows, "best")[0] || null;
+  const fastestRow = sortSelectionSummaryRows(rows, "fastest")[0] || null;
+
+  const bestName = bestRow ? bestRow.model || "NO MODEL" : "NO DATA";
+  const bestMeta = bestRow
+    ? `SCORE ${bestRow.summary.score === null ? "—" : `${bestRow.summary.score}%`} · TOTAL ${bestRow.summary.total}`
+    : "—";
+  const fastestName = fastestRow ? fastestRow.model || "NO MODEL" : "NO DATA";
+  const fastestMeta = fastestRow
+    ? `RATE ${fastestRow.summary.ratePerMinute.toFixed(2)}/MIN · TOTAL ${fastestRow.summary.total}`
+    : "—";
+
+  document.getElementById("selection-summary-best").textContent = bestName;
+  document.getElementById("selection-summary-best-meta").textContent = bestMeta;
+  document.getElementById("selection-summary-fastest").textContent =
+    fastestName;
+  document.getElementById("selection-summary-fastest-meta").textContent =
+    fastestMeta;
+}
+
+function getSummaryGraphMetricConfig() {
+  if (summaryGraphMetric === "rate") {
+    return {
+      label: "THROUGHPUT",
+      value: (row) => row.summary.ratePerMinute,
+      format: (value) => `${value.toFixed(2)}/MIN`,
+    };
+  }
+  if (summaryGraphMetric === "total") {
+    return {
+      label: "TOTAL EVALS",
+      value: (row) => row.summary.total,
+      format: (value) => `${Math.round(value)}`,
+    };
+  }
+  return {
+    label: "SCORE %",
+    value: (row) => (row.summary.score === null ? 0 : row.summary.score),
+    format: (value, row) =>
+      row.summary.score === null ? "—" : `${Math.round(value)}%`,
+  };
+}
+
+function updateSummaryViewControls() {
+  const showChart = summaryViewMode === "chart";
+  const showModels = summaryViewMode === "models";
+  document
+    .getElementById("selection-summary-graph-wrap")
+    .classList.toggle("hidden", !showChart);
+  document
+    .getElementById("selection-summary-list-wrap")
+    .classList.toggle("hidden", showChart || showModels);
+  document
+    .getElementById("selection-summary-models-wrap")
+    .classList.toggle("hidden", !showModels);
+  document
+    .getElementById("selection-summary-view-list")
+    .classList.toggle("active", summaryViewMode === "list");
+  document
+    .getElementById("selection-summary-view-chart")
+    .classList.toggle("active", showChart);
+  document
+    .getElementById("selection-summary-view-models")
+    .classList.toggle("active", showModels);
+  const graphControlsDisplay = showChart ? "" : "none";
+  document.getElementById(
+    "selection-summary-graph-metric-label",
+  ).style.display = graphControlsDisplay;
+  document.getElementById("selection-summary-graph-metric").style.display =
+    graphControlsDisplay;
+}
+
+function updateSummarySortIndicators() {
+  document.querySelectorAll(".summary-table th.sortable").forEach((th) => {
+    const sortState =
+      th.dataset.table === "models" ? summaryModelSort : summarySessionSort;
+    const active = sortState.key === th.dataset.sort;
+    th.classList.toggle("sorted", active);
+    th.querySelector(".sort-arrow").textContent = active
+      ? sortState.dir === "desc"
+        ? " ▼"
+        : " ▲"
+      : "";
+  });
+}
+
+function handleSummaryHeaderClick(table, key) {
+  const sortState = table === "models" ? summaryModelSort : summarySessionSort;
+  if (sortState.key === key) {
+    sortState.dir = sortState.dir === "desc" ? "asc" : "desc";
+  } else {
+    sortState.key = key;
+    sortState.dir = SUMMARY_ASC_DEFAULT_KEYS.has(key) ? "asc" : "desc";
+  }
+  refreshSelectionSummaryModal();
+}
+
+function getSessionSortValue(row, key) {
+  switch (key) {
+    case "model":
+      return (row.model || "").toLowerCase() || null;
+    case "color": {
+      const index = SESSION_COLORS.indexOf(row.session.color);
+      return index === -1 ? null : index;
+    }
+    case "success":
+      return row.summary.successes;
+    case "fail":
+      return row.summary.fails;
+    case "total":
+      return row.summary.total;
+    case "score":
+      return row.summary.score;
+    case "rate":
+      return row.summary.ratePerMinute;
+    case "events":
+      return row.summary.totalEvents;
+    default:
+      return null;
+  }
+}
+
+function getModelSortValue(row, key) {
+  switch (key) {
+    case "model":
+      return row.model.toLowerCase();
+    case "red":
+    case "yellow":
+    case "blue":
+      return row.colors[key].avg;
+    case "overall":
+      return row.overallRaw;
+    case "confidence":
+      return row.overallConfidence;
+    case "events":
+      return row.totalEvents;
+    case "sessions":
+      return row.sessions;
+    case "evals":
+      return row.totalEvals;
+    default:
+      return null;
+  }
+}
+
+function sortRowsBy(rows, getValue, sortState, tiebreak) {
+  const mul = sortState.dir === "asc" ? 1 : -1;
+  return [...rows].sort((a, b) => {
+    const aValue = getValue(a, sortState.key);
+    const bValue = getValue(b, sortState.key);
+    const aNull = aValue === null || aValue === undefined;
+    const bNull = bValue === null || bValue === undefined;
+    if (aNull && bNull) return tiebreak ? tiebreak(a, b) : 0;
+    if (aNull) return 1;
+    if (bNull) return -1;
+    let cmp = 0;
+    if (typeof aValue === "string" || typeof bValue === "string")
+      cmp = String(aValue).localeCompare(String(bValue));
+    else cmp = aValue - bValue;
+    if (cmp !== 0) return cmp * mul;
+    return tiebreak ? tiebreak(a, b) : 0;
+  });
+}
+
+function renderSelectionGraph(rows) {
+  const graph = document.getElementById("selection-summary-graph");
+  if (summaryViewMode !== "chart") return;
+
+  const metric = getSummaryGraphMetricConfig();
+  const values = rows.map((row) => metric.value(row));
+  const maxValue = Math.max(1, ...values);
+  graph.innerHTML = rows.length
+    ? rows
+        .map((row, index) => {
+          const value = metric.value(row);
+          const width = Math.max(0, Math.min(100, (value / maxValue) * 100));
+          const modelLabel = row.model || "NO MODEL";
+          const fillColor =
+            summaryGraphMetric === "score" && row.summary.score !== null
+              ? row.summary.score >= 70
+                ? "var(--success)"
+                : row.summary.score >= 40
+                  ? "var(--warn)"
+                  : "var(--fail)"
+              : "var(--accent)";
+          return `
+                  <div class="summary-graph-row">
+                    <div class="summary-graph-label">#${index + 1} ${escHtml(modelLabel)}</div>
+                    <div class="summary-graph-track">
+                      <div class="summary-graph-fill" style="width:${width}%;background:${fillColor};"></div>
+                    </div>
+                    <div class="summary-graph-value">${metric.format(value, row)}</div>
+                  </div>
+                `;
+        })
+        .join("")
+    : '<div class="summary-graph-value">No data.</div>';
+}
+
+function buildModelComparisonRows(baseRows) {
+  const map = new Map();
+  baseRows.forEach((row) => {
+    const displayModel = row.model.trim() || "NO MODEL";
+    const key = displayModel.toUpperCase();
+    if (!map.has(key)) {
+      map.set(key, {
+        model: displayModel,
+        sessions: 0,
+        totalEvals: 0,
+        uncolored: 0,
+        eventCounts: {},
+        totalEvents: 0,
+        comments: [],
+        operators: [],
+        colors: Object.fromEntries(
+          SESSION_COLORS.map((color) => [
+            color,
+            { sessions: 0, successes: 0, total: 0, scores: [] },
+          ]),
+        ),
+      });
+    }
+    const entry = map.get(key);
+    entry.sessions += 1;
+    entry.totalEvals += row.summary.total;
+    Object.entries(row.summary.eventCounts).forEach(([name, count]) => {
+      entry.eventCounts[name] = (entry.eventCounts[name] || 0) + count;
+      entry.totalEvents += count;
+    });
+    const rowComment = (row.comment || "").trim();
+    if (rowComment && !entry.comments.includes(rowComment))
+      entry.comments.push(rowComment);
+    const rowTicket = getTicketById(row.session.ticketId);
+    if (rowTicket) {
+      rowTicket.operators.forEach((operator) => {
+        if (!entry.operators.includes(operator)) entry.operators.push(operator);
+      });
+    }
+    const color = row.session.color;
+    if (color && entry.colors[color]) {
+      const colorStats = entry.colors[color];
+      colorStats.sessions += 1;
+      colorStats.successes += row.summary.successes;
+      colorStats.total += row.summary.total;
+      if (row.summary.score !== null) colorStats.scores.push(row.summary.score);
+    } else {
+      entry.uncolored += 1;
+    }
+  });
+  return [...map.values()].map((entry) => {
+    SESSION_COLORS.forEach((color) => {
+      const colorStats = entry.colors[color];
+      colorStats.avg = colorStats.scores.length
+        ? colorStats.scores.reduce((sum, value) => sum + value, 0) /
+          colorStats.scores.length
+        : null;
+      colorStats.wilson = colorStats.total
+        ? wilsonBound(colorStats.successes, colorStats.total, "lower")
+        : 0;
+    });
+    const availableAvgs = SESSION_COLORS.map(
+      (color) => entry.colors[color].avg,
+    ).filter((value) => value !== null);
+    entry.overallRaw = availableAvgs.length
+      ? availableAvgs.reduce((sum, value) => sum + value, 0) /
+        availableAvgs.length
+      : null;
+    entry.overallConfidence =
+      (SESSION_COLORS.reduce(
+        (sum, color) => sum + entry.colors[color].wilson,
+        0,
+      ) /
+        SESSION_COLORS.length) *
+      100;
+    return entry;
+  });
+}
+
+function renderModelComparison(rows) {
+  const body = document.getElementById("selection-summary-models-body");
+  body.innerHTML = rows
+    .map((row, index) => {
+      const colorCells = SESSION_COLORS.map((color) => {
+        const stats = row.colors[color];
+        if (stats.avg === null) return "<td>—</td>";
+        const rounded = Math.round(stats.avg);
+        return `<td><span class="${getScoreClass(rounded)}">${rounded}%</span></td>`;
+      }).join("");
+      const overallRounded =
+        row.overallRaw === null ? null : Math.round(row.overallRaw);
+      return `
+              <tr>
+                <td><span class="summary-rank">${index + 1}</span></td>
+                <td class="summary-model-cell">${escHtml(row.model)}</td>
+                ${colorCells}
+                <td class="${getScoreClass(overallRounded)}">${overallRounded === null ? "—" : `${overallRounded}%`}</td>
+                <td>${row.overallConfidence.toFixed(1)}%</td>
+                <td>${buildEventDotsMarkup(row.eventCounts)}</td>
+                <td>${row.sessions}</td>
+                <td>${row.totalEvals}</td>
+              </tr>
+            `;
+    })
+    .join("");
+}
+
+function buildModelClipboardText(rows) {
+  return rows
+    .map((row, index) => {
+      const lines = [
+        `${index + 1}. Model - ${row.model};`,
+        `Overall avg - ${row.overallRaw === null ? "—" : `${Math.round(row.overallRaw)}%`}; Confidence - ${row.overallConfidence.toFixed(1)}%;`,
+      ];
+      const presentColors = SESSION_COLORS.filter(
+        (color) => row.colors[color].avg !== null,
+      );
+      if (presentColors.length) {
+        lines.push("", "Average scores:");
+        presentColors.forEach((color, colorIndex) => {
+          const stats = row.colors[color];
+          const cap = color[0].toUpperCase() + color.slice(1);
+          const tail = colorIndex === presentColors.length - 1 ? "." : ";";
+          lines.push(
+            `${cap} - ${Math.round(stats.avg)}% (${stats.sessions} session${stats.sessions === 1 ? "" : "s"}, ${stats.total} evals)${tail}`,
+          );
+        });
+      }
+      const eventEntries = EVENT_TYPES.map((type) => ({
+        label: type.label,
+        count: row.eventCounts[type.id] || 0,
+      }))
+        .filter((item) => item.count > 0)
+        .sort((a, b) => b.count - a.count);
+      if (eventEntries.length) {
+        lines.push("", "Events:");
+        eventEntries.forEach((item) =>
+          lines.push(`${item.label} - ${item.count};`),
+        );
+      }
+      if (row.comments.length)
+        lines.push("", "Comment:", row.comments.join("\n"));
+      if (row.operators.length)
+        lines.push("", "Operators:", row.operators.join(", "));
+      return lines.join("\n");
+    })
+    .join("\n\n");
+}
+
+function buildSummaryClipboardText(rows) {
+  return rows
+    .map((row, index) => {
+      const cleanedNotes = String(row.comment || "")
+        .replace(/\s+/g, " ")
+        .trim();
+      const score = row.summary.score === null ? "—" : row.summary.score;
+      const lines = [
+        `${index + 1}. Model - ${row.model || "N/A"}${row.session.color ? ` (${row.session.color})` : ""};`,
+        `Success - ${row.summary.successes}; Fail - ${row.summary.fails}; Total - ${row.summary.total}; Score - ${score}.`,
+      ];
+      const eventParts = EVENT_TYPES.filter(
+        (type) => row.summary.eventCounts[type.id],
+      )
+        .map((type) => `${type.label} - ${row.summary.eventCounts[type.id]}`)
+        .join("; ");
+      if (eventParts) lines.push(`Events: ${eventParts}.`);
+      if (cleanedNotes) lines.push(`Notes: ${cleanedNotes}`);
+      return lines.join("\n");
+    })
+    .join("\n\n");
+}
+
+function renderSelectionSummaryModal(rows) {
+  const body = document.getElementById("selection-summary-body");
+  body.innerHTML = rows
+    .map((row, index) => {
+      const score = row.summary.score;
+      const scoreClass = getScoreClass(score);
+      return `
+              <tr>
+                <td><span class="summary-rank">${index + 1}</span></td>
+                <td class="summary-model-cell">${escHtml(row.model || "NO MODEL")}</td>
+                <td>${row.session.color ? `<span class="session-color-tag ${row.session.color}">${row.session.color.toUpperCase()}</span>` : "—"}</td>
+                <td>${row.summary.successes}</td>
+                <td>${row.summary.fails}</td>
+                <td>${row.summary.total}</td>
+                <td class="${scoreClass}">${score === null ? "—" : `${score}%`}</td>
+                <td>${row.summary.ratePerMinute.toFixed(2)}/m</td>
+                <td>${buildEventDotsMarkup(row.summary.eventCounts)}</td>
+                <td class="summary-comment-cell">${row.comment ? escHtml(row.comment) : "—"}</td>
+              </tr>
+            `;
+    })
+    .join("");
+}
+
+function refreshSelectionSummaryModal() {
+  const baseRows = getSummaryBaseRows();
+  if (!baseRows.length) {
+    closeSelectionSummaryModal();
+    return;
+  }
+  const sortedRows = sortRowsBy(
+    baseRows,
+    getSessionSortValue,
+    summarySessionSort,
+    (a, b) => compareByDate(a.session, b.session, "desc"),
+  );
+  summaryCurrentRows = sortedRows;
+  summaryModelRows = sortRowsBy(
+    buildModelComparisonRows(baseRows),
+    getModelSortValue,
+    summaryModelSort,
+    (a, b) => b.totalEvals - a.totalEvals,
+  );
+  const subtitle = document.getElementById("selection-summary-subtitle");
+  const scopeLabel = state.selectedSessionIds.length
+    ? `${baseRows.length} SELECTED`
+    : `ALL VISIBLE (${baseRows.length})`;
+  const sortInfo =
+    summaryViewMode === "models"
+      ? `${summaryModelRows.length} MODELS · SORTED BY ${summaryModelSort.key.toUpperCase()} ${summaryModelSort.dir === "desc" ? "↓" : "↑"}`
+      : `SORTED BY ${summarySessionSort.key.toUpperCase()} ${summarySessionSort.dir === "desc" ? "↓" : "↑"}`;
+  subtitle.textContent = `${scopeLabel} · ${sortInfo}`;
+  updateSummaryViewControls();
+  updateSummarySortIndicators();
+  renderSelectionMetrics(baseRows);
+  renderSelectionSummaryModal(sortedRows);
+  renderSelectionGraph(sortedRows);
+  renderModelComparison(summaryModelRows);
+  summaryClipboardText =
+    summaryViewMode === "models"
+      ? buildModelClipboardText(summaryModelRows)
+      : buildSummaryClipboardText(sortedRows);
+}
+
+function updateModalScrollLock() {
+  const hasOpenModal = Boolean(
+    document.querySelector(".modal-overlay.visible") ||
+    document.querySelector(".confirm-modal-overlay.visible"),
+  );
+  document.body.classList.toggle("modal-open", hasOpenModal);
+}
+
+function openSelectionSummaryModal() {
+  const baseRows = getSummaryBaseRows();
+  if (!baseRows.length) return;
+  summaryViewMode = "list";
+  document.getElementById("selection-summary-graph-metric").value =
+    summaryGraphMetric;
+  document.getElementById("selection-summary-copy").textContent = "Copy";
+  document.getElementById("selection-summary-modal").classList.add("visible");
+  updateModalScrollLock();
+  refreshSelectionSummaryModal();
+}
+
+function closeSelectionSummaryModal() {
+  document
+    .getElementById("selection-summary-modal")
+    .classList.remove("visible");
+  updateModalScrollLock();
+}
+
+async function copySelectionSummary() {
+  summaryClipboardText =
+    summaryViewMode === "models"
+      ? buildModelClipboardText(summaryModelRows)
+      : buildSummaryClipboardText(summaryCurrentRows);
+  if (!summaryClipboardText) return;
+  const copyButton = document.getElementById("selection-summary-copy");
+  let copied = false;
+  if (navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(summaryClipboardText);
+      copied = true;
+    } catch (error) {
+      copied = false;
+    }
+  }
+  if (!copied) {
+    const fallbackInput = document.createElement("textarea");
+    fallbackInput.value = summaryClipboardText;
+    fallbackInput.setAttribute("readonly", "");
+    fallbackInput.style.position = "fixed";
+    fallbackInput.style.opacity = "0";
+    document.body.appendChild(fallbackInput);
+    fallbackInput.select();
+    copied = document.execCommand("copy");
+    fallbackInput.remove();
+  }
+  copyButton.textContent = copied ? "Copied" : "Copy failed";
+  setTimeout(() => {
+    copyButton.textContent = "Copy";
+  }, 1400);
+}
+
+function wilsonBound(successes, total, side = "lower") {
+  if (!total) return side === "lower" ? 0 : 1;
+  const phat = successes / total;
+  const z2 = WILSON_Z * WILSON_Z;
+  const denom = 1 + z2 / total;
+  const center = phat + z2 / (2 * total);
+  const margin =
+    WILSON_Z * Math.sqrt((phat * (1 - phat) + z2 / (4 * total)) / total);
+  const value =
+    side === "lower" ? (center - margin) / denom : (center + margin) / denom;
+  return Math.max(0, Math.min(1, value));
+}
+
+function getSessionSummary(session) {
+  const successes = session.entries.filter(
+    (entry) => entry.type === "success",
+  ).length;
+  const fails = session.entries.filter((entry) => entry.type === "fail").length;
+  const total = successes + fails;
+  const eventCounts = {};
+  let totalEvents = 0;
+  session.entries.forEach((entry) => {
+    if (entry.type !== "event") return;
+    eventCounts[entry.name] = (eventCounts[entry.name] || 0) + 1;
+    totalEvents += 1;
+  });
+  const elapsed = session._active ? state.elapsed : session.elapsedAtSave || 0;
+  const score = total > 0 ? Math.round((successes / total) * 100) : null;
+  const successRate = total > 0 ? successes / total : null;
+  const failRate = total > 0 ? fails / total : null;
+  const ratePerMinute = elapsed > 0 ? total / (elapsed / 60) : 0;
+  const wilsonLower = wilsonBound(successes, total, "lower");
+  const wilsonUpper = wilsonBound(successes, total, "upper");
+  const qualityConfidence = wilsonLower;
+  const riskConfidence = total > 0 ? 1 - wilsonUpper : 0;
+  const startedAt = session.startedAt
+    ? new Date(session.startedAt).toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "Unknown";
+  return {
+    successes,
+    fails,
+    total,
+    eventCounts,
+    totalEvents,
+    elapsed,
+    score,
+    successRate,
+    failRate,
+    ratePerMinute,
+    wilsonLower,
+    wilsonUpper,
+    qualityConfidence,
+    riskConfidence,
+    startedAt,
+  };
+}
+
+function compareByDate(a, b, direction = "desc") {
+  const aTime = new Date(a.startedAt || 0).getTime();
+  const bTime = new Date(b.startedAt || 0).getTime();
+  return direction === "desc" ? bTime - aTime : aTime - bTime;
+}
+
+function compareNumbersDesc(a, b, epsilon = 1e-12) {
+  if (Math.abs(a - b) <= epsilon) return 0;
+  return b - a;
+}
+
+function compareNumbersAsc(a, b, epsilon = 1e-12) {
+  if (Math.abs(a - b) <= epsilon) return 0;
+  return a - b;
+}
+
+function sortSessions(sessions) {
+  const withMeta = sessions.map((session) => ({
+    session,
+    summary: getSessionSummary(session),
+  }));
+  withMeta.sort((left, right) => {
+    const a = left.session;
+    const b = right.session;
+    const sa = left.summary;
+    const sb = right.summary;
+    if (state.historySort === "oldest") return compareByDate(a, b, "asc");
+    if (state.historySort === "best") {
+      const qualityCmp = compareNumbersDesc(
+        sa.qualityConfidence,
+        sb.qualityConfidence,
+      );
+      if (qualityCmp !== 0) return qualityCmp;
+      if (sb.total !== sa.total) return sb.total - sa.total;
+      if (sa.successRate !== null && sb.successRate !== null) {
+        const successCmp = compareNumbersDesc(sa.successRate, sb.successRate);
+        if (successCmp !== 0) return successCmp;
+      }
+      return compareByDate(a, b, "desc");
+    }
+    if (state.historySort === "worst") {
+      const riskCmp = compareNumbersDesc(sa.riskConfidence, sb.riskConfidence);
+      if (riskCmp !== 0) return riskCmp;
+      if (sb.total !== sa.total) return sb.total - sa.total;
+      if (sa.successRate !== null && sb.successRate !== null) {
+        const successCmp = compareNumbersAsc(sa.successRate, sb.successRate);
+        if (successCmp !== 0) return successCmp;
+      }
+      return compareByDate(a, b, "desc");
+    }
+    if (state.historySort === "fastest") {
+      const rateCmp = compareNumbersDesc(sa.ratePerMinute, sb.ratePerMinute);
+      if (rateCmp !== 0) return rateCmp;
+      if (sb.total !== sa.total) return sb.total - sa.total;
+      return compareByDate(a, b, "desc");
+    }
+    return compareByDate(a, b, "desc");
+  });
+  return withMeta.map((item) => item.session);
+}
+
+function getAllRenderableSessions() {
+  const items = [];
+  if (state.currentSession)
+    items.push({ ...cloneSession(state.currentSession), _active: true });
+  state.sessions.forEach((session) => items.push(cloneSession(session)));
+  return items;
+}
+
+function matchesHistorySearch(session, query) {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return true;
+  return [
+    session.title || "",
+    session.model || "",
+    session.comment || "",
+    getTicketName(session.ticketId) || "",
+  ].some((value) => value.toLowerCase().includes(normalized));
+}
+
+function matchesTicketFilter(session) {
+  if (state.historyTicketFilter === "all") return true;
+  if (state.historyTicketFilter === "ungrouped") return !session.ticketId;
+  return session.ticketId === state.historyTicketFilter;
+}
+
+function getFilteredRenderableSessions() {
+  const filtered = getAllRenderableSessions().filter((session) => {
+    const filterMatch =
+      state.historyFilter === "all" ||
+      getSessionStatus(session) === state.historyFilter;
+    return (
+      filterMatch &&
+      matchesHistorySearch(session, state.historyQuery) &&
+      matchesTicketFilter(session)
+    );
+  });
+  return sortSessions(filtered);
+}
+
+function getSessionsByIds(ids) {
+  const selected = new Set(ids);
+  return getAllRenderableSessions().filter((session) =>
+    selected.has(session.id),
+  );
+}
+
+function getExportSessions() {
+  return state.selectedSessionIds.length
+    ? sortSessions(getSessionsByIds(state.selectedSessionIds))
+    : getFilteredRenderableSessions();
+}
+
+function updateHistoryTabCounts() {
+  const counts = { all: 0, active: 0, done: 0, stopped: 0 };
+  getAllRenderableSessions().forEach((session) => {
+    counts.all += 1;
+    counts[getSessionStatus(session)] += 1;
+  });
+  document.getElementById("count-all").textContent = counts.all;
+  document.getElementById("count-active").textContent = counts.active;
+  document.getElementById("count-done").textContent = counts.done;
+  document.getElementById("count-stopped").textContent = counts.stopped;
+  document.querySelectorAll(".history-tab").forEach((button) => {
+    button.classList.toggle(
+      "active",
+      button.dataset.filter === state.historyFilter,
+    );
+  });
+}
+
+function updateHistoryControls() {
+  const ticketFilter = document.getElementById("history-ticket-filter");
+  const selectedTicket = state.historyTicketFilter;
+  ticketFilter.innerHTML =
+    '<option value="all">ALL TICKETS</option><option value="ungrouped">NO TICKET</option>' +
+    state.tickets
+      .map(
+        (ticket) =>
+          `<option value="${escHtml(ticket.id)}">${escHtml(ticket.name)}</option>`,
+      )
+      .join("");
+  ticketFilter.value =
+    state.tickets.some((ticket) => ticket.id === selectedTicket) ||
+    selectedTicket === "all" ||
+    selectedTicket === "ungrouped"
+      ? selectedTicket
+      : "all";
+  if (ticketFilter.value !== selectedTicket)
+    state.historyTicketFilter = ticketFilter.value;
+  document.getElementById("history-sort").value = state.historySort;
+  document.getElementById("history-search").value = state.historyQuery;
+
+  const hasSelection = state.selectedSessionIds.length > 0;
+  const visibleCount = getFilteredRenderableSessions().length;
+  document
+    .getElementById("select-mode-btn")
+    .classList.toggle("active", state.selectMode);
+  document.getElementById("select-mode-btn").textContent = state.selectMode
+    ? `SELECTING ${state.selectedSessionIds.length}`
+    : "SELECT";
+  [
+    "select-visible-btn",
+    "clear-selection-btn",
+    "assign-ticket-btn",
+    "delete-selected-btn",
+  ].forEach((id) => {
+    document.getElementById(id).style.display = state.selectMode ? "" : "none";
+  });
+  document.getElementById("select-visible-btn").disabled =
+    !state.selectMode || !visibleCount;
+  document.getElementById("clear-selection-btn").disabled = !hasSelection;
+  document.getElementById("assign-ticket-btn").disabled = !hasSelection;
+  document.getElementById("delete-selected-btn").disabled = !hasSelection;
+  document.getElementById("summarize-selected-btn").disabled =
+    !hasSelection && !visibleCount;
+}
+
+function clearSelection() {
+  state.selectedSessionIds = [];
+  closeSelectionSummaryModal();
+}
+
+function toggleSelectMode() {
+  state.selectMode = !state.selectMode;
+  if (!state.selectMode) clearSelection();
+  updateHistoryControls();
+  renderHistory();
+}
+
+function toggleSessionSelection(id) {
+  if (!state.selectMode) return;
+  const set = new Set(state.selectedSessionIds);
+  if (set.has(id)) set.delete(id);
+  else set.add(id);
+  state.selectedSessionIds = [...set];
+  updateHistoryControls();
+  if (
+    document
+      .getElementById("selection-summary-modal")
+      .classList.contains("visible")
+  )
+    refreshSelectionSummaryModal();
+}
+
+function selectVisibleSessions() {
+  state.selectedSessionIds = getFilteredRenderableSessions().map(
+    (session) => session.id,
+  );
+  if (state.selectedSessionIds.length) state.selectMode = true;
+  updateHistoryControls();
+  if (
+    document
+      .getElementById("selection-summary-modal")
+      .classList.contains("visible")
+  )
+    refreshSelectionSummaryModal();
+  renderHistory();
+}
+
+function pruneSelection() {
+  const validIds = new Set(
+    getAllRenderableSessions().map((session) => session.id),
+  );
+  state.selectedSessionIds = state.selectedSessionIds.filter((id) =>
+    validIds.has(id),
+  );
+  if (!state.selectedSessionIds.length) closeSelectionSummaryModal();
+}
+
+function newSession(color) {
+  if (state.currentSession && !state.currentSession.completed) {
+    state.currentSession.completed = false;
+    state.currentSession.elapsedAtSave = state.elapsed;
+    archiveCurrentSession();
+  }
+  state.currentSession = normalizeSession({
+    id: Date.now().toString(),
+    model: state.currentModel,
+    title: "",
+    ticketId: "",
+    color: SESSION_COLORS.includes(color) ? color : "",
+    comment: "",
+    startedAt: new Date().toISOString(),
+    entries: [],
+    completed: false,
+    elapsedAtSave: 0,
+    targetDuration: state.sessionDuration,
+  });
+  state.elapsed = 0;
+  pauseTimer();
+  updateTimerDisplay();
+  updateStats();
+  updateButtons(false);
+  updateTitleUI();
+  updateModelUI();
+  renderHistory();
+  save();
+}
+
+function archiveCurrentSession() {
+  if (!state.currentSession) return;
+  state.sessions = state.sessions.filter(
+    (session) => session.id !== state.currentSession.id,
+  );
+  state.sessions.unshift(cloneSession(state.currentSession));
+  state.currentSession = null;
+}
+
+function completeSession() {
+  if (!state.currentSession) return;
+  pauseTimer();
+  state.currentSession.completed = true;
+  state.currentSession.elapsedAtSave = state.elapsed;
+  archiveCurrentSession();
+  state.elapsed = 0;
+  updateTimerDisplay();
+  updateStats();
+  updateButtons(false);
+  updateTitleUI();
+  renderHistory();
+  save();
+}
+
+function stopSession() {
+  if (!state.currentSession) return;
+  pauseTimer();
+  state.currentSession.completed = false;
+  state.currentSession.elapsedAtSave = state.elapsed;
+  archiveCurrentSession();
+  state.elapsed = 0;
+  updateTimerDisplay();
+  updateStats();
+  updateButtons(false);
+  updateTitleUI();
+  renderHistory();
+  save();
+}
+
+function eraseCurrentSession() {
+  if (!state.currentSession) return;
+  pauseTimer();
+  const erasedSession = cloneSession({
+    ...state.currentSession,
+    elapsedAtSave: state.elapsed,
+  });
+  state.currentSession = null;
+  state.elapsed = 0;
+  updateTimerDisplay();
+  updateStats();
+  updateButtons(false);
+  updateTitleUI();
+  renderHistory();
+  save();
+  queueUndo(
+    { kind: "current-erase", session: erasedSession },
+    `Erased ${getSessionLabel(erasedSession)}`,
+  );
+}
+
+function resumeSession(sessionId) {
+  if (state.currentSession) {
+    state.currentSession.completed = false;
+    state.currentSession.elapsedAtSave = state.elapsed;
+    archiveCurrentSession();
+  }
+  pauseTimer();
+  const index = state.sessions.findIndex((session) => session.id === sessionId);
+  if (index === -1) return;
+  const session = state.sessions.splice(index, 1)[0];
+  state.currentSession = normalizeSession(session);
+  state.elapsed = session.elapsedAtSave || 0;
+  state.running = false;
+  updateTimerDisplay();
+  updateStats();
+  updateButtons(false);
+  updateTitleUI();
+  updateModelUI();
+  renderHistory();
+  save();
+}
+
+function recordVerdict(type) {
+  if (!state.currentSession || !state.running) return;
+  state.currentSession.entries.push({
+    type,
+    ts: formatTime(state.elapsed),
+  });
+  updateStats();
+  const button =
+    type === "success"
+      ? document.getElementById("btn-success")
+      : document.getElementById("btn-fail");
+  button.classList.remove("flash-success", "flash-fail");
+  void button.offsetWidth;
+  button.classList.add(type === "success" ? "flash-success" : "flash-fail");
+  save();
+}
+
+function recordEvent(eventId) {
+  if (!state.currentSession || !state.running) return;
+  if (!EVENT_IDS.includes(eventId)) return;
+  state.currentSession.entries.push({
+    type: "event",
+    name: eventId,
+    ts: formatTime(state.elapsed),
+  });
+  const button = document.querySelector(`.event-btn[data-event="${eventId}"]`);
+  if (button) {
+    button.classList.remove("flash-event");
+    void button.offsetWidth;
+    button.classList.add("flash-event");
+    setTimeout(() => button.classList.remove("flash-event"), 240);
+  }
+  save();
+  renderHistory();
+}
+
+function renderEventButtons() {
+  const row = document.getElementById("event-row");
+  row.innerHTML =
+    '<span class="event-row-label">EVENTS</span>' +
+    EVENT_TYPES.map(
+      (type) =>
+        `<button class="event-btn event-${type.id}" data-event="${type.id}" type="button" disabled><kbd>${type.key.toUpperCase()}</kbd> ${type.label}</button>`,
+    ).join("");
+  row.querySelectorAll(".event-btn").forEach((button) => {
+    button.addEventListener("click", () => recordEvent(button.dataset.event));
+  });
+}
+
+function buildEventDotsMarkup(eventCounts, emptyText = "—") {
+  const chips = EVENT_TYPES.filter((type) => eventCounts[type.id])
+    .map(
+      (type) =>
+        `<span class="event-dot-tag event-${type.id}" title="${type.label} × ${eventCounts[type.id]}">●${eventCounts[type.id]}</span>`,
+    )
+    .join(" ");
+  return chips || emptyText;
+}
+
+function buildCardEventTags(eventCounts) {
+  const present = EVENT_TYPES.filter((type) => eventCounts[type.id]);
+  if (!present.length) return "";
+  const compact = present.length > 2;
+  const chips = present
+    .map(
+      (type) =>
+        `<span class="event-dot-tag event-${type.id}" title="${type.label} × ${eventCounts[type.id]}">${compact ? `●${eventCounts[type.id]}` : `${type.label} ×${eventCounts[type.id]}`}</span>`,
+    )
+    .join("");
+  return `<span class="session-event-tags">${chips}</span>`;
+}
+
+function updateButtons(running) {
+  const hasSession = Boolean(state.currentSession);
+  document.getElementById("btn-play").disabled = running || !hasSession;
+  document.getElementById("btn-pause").disabled = !running;
+  document.getElementById("btn-finish").disabled = !hasSession;
+  document.getElementById("btn-stop").disabled = !hasSession;
+  document.getElementById("btn-erase").disabled = !hasSession;
+  document.getElementById("btn-success").disabled = !running;
+  document.getElementById("btn-fail").disabled = !running;
+  document.querySelectorAll(".event-btn").forEach((button) => {
+    button.disabled = !running;
+  });
+  document.getElementById("btn-play").classList.toggle("active", running);
+  updateDurationUI();
+}
+
+function updateStats() {
+  const entries = state.currentSession ? state.currentSession.entries : [];
+  const successes = entries.filter((entry) => entry.type === "success").length;
+  const fails = entries.filter((entry) => entry.type === "fail").length;
+  const total = successes + fails;
+  const score = total > 0 ? Math.round((successes / total) * 100) : null;
+  document.getElementById("stat-success").textContent = successes;
+  document.getElementById("stat-fail").textContent = fails;
+  document.getElementById("stat-total").textContent = total;
+  document.getElementById("stat-score").textContent =
+    score !== null ? `${score}%` : "—";
+}
+
+function buildEntriesMarkup(session, summary) {
+  const commentValue = session.comment || "";
+  const eventChips = EVENT_TYPES.filter((type) => summary.eventCounts[type.id])
+    .map(
+      (type) =>
+        `<span class="event-dot-tag event-${type.id}">${type.label} ×${summary.eventCounts[type.id]}</span>`,
+    )
+    .join("");
+  const ticket = getTicketById(session.ticketId);
+  const operatorsChip =
+    ticket && ticket.operators.length
+      ? `<span class="session-summary-chip">OPERATORS: ${escHtml(ticket.operators.join(", "))}</span>`
+      : "";
+  const summaryChips = `
+    <div class="session-entries-summary">
+      <span class="session-summary-chip">QUALITY ${(summary.qualityConfidence * 100).toFixed(1)}%</span>
+      <span class="session-summary-chip">RISK ${(summary.riskConfidence * 100).toFixed(1)}%</span>
+      <span class="session-summary-chip">RAW ${summary.score !== null ? `${summary.score}%` : "—"}</span>
+      <span class="session-summary-chip">RATE ${summary.ratePerMinute.toFixed(2)}/MIN</span>
+      <span class="session-summary-chip">DURATION ${formatTime(summary.elapsed)}</span>
+      <span class="session-summary-chip">TOTAL ${summary.total}</span>
+      ${eventChips}${operatorsChip}
+    </div>
+  `;
+  const commentMarkup = `
+    <div class="session-comment-wrap">
+      <div class="session-comment-label">Comment (optional)</div>
+      <textarea
+        class="session-comment-input"
+        data-comment="${session.id}"
+        maxlength="${COMMENT_MAX_LENGTH}"
+        placeholder="Add a short note for this session..."
+      >${escHtml(commentValue)}</textarea>
+      <div class="session-comment-meta" data-comment-meta="${session.id}">${commentValue.length}/${COMMENT_MAX_LENGTH}</div>
+    </div>
+  `;
+  let verdictNumber = 0;
+  const rows = session.entries.length
+    ? session.entries
+        .map((entry) => {
+          if (entry.type === "event") {
+            const type = EVENT_TYPES.find((item) => item.id === entry.name);
+            const label = type ? type.label : entry.name;
+            return `
+        <div class="entry-row ev event-${entry.name}" title="${label} @ ${entry.ts}">
+          <span class="entry-badge">${label}</span>
+          <span class="entry-timestamp">@ ${entry.ts}</span>
+          <span style="font-family:var(--mono);font-size:10px;color:var(--text-dimmer)">EVENT</span>
+        </div>
+      `;
+          }
+          verdictNumber += 1;
+          return `
+        <div class="entry-row ${entry.type === "success" ? "s" : "f"}">
+          <span class="entry-badge">${entry.type === "success" ? "PASS" : "FAIL"}</span>
+          <span class="entry-timestamp">@ ${entry.ts}</span>
+          <span style="font-family:var(--mono);font-size:10px;color:var(--text-dimmer)">#${verdictNumber}</span>
+        </div>
+      `;
+        })
+        .join("")
+    : '<div style="font-family:var(--mono);font-size:11px;color:var(--text-dimmer);padding:8px 0">No entries yet.</div>';
+  const resumeButton =
+    !session._active && !session.completed
+      ? `<button class="resume-btn" data-resume="${session.id}">▶ RESUME SESSION</button>`
+      : "";
+  return `${summaryChips}${commentMarkup}${rows}${resumeButton}`;
+}
+
+function buildInlineTicketOptions(selectedTicketId) {
+  const options = ['<option value="">NO TICKET</option>'];
+  state.tickets.forEach((ticket) => {
+    options.push(
+      `<option value="${escHtml(ticket.id)}" ${ticket.id === selectedTicketId ? "selected" : ""}>${escHtml(ticket.name)}</option>`,
+    );
+  });
+  options.push('<option value="__new__">+ NEW TICKET…</option>');
+  return options.join("");
+}
+
+function buildSessionCard(session) {
+  const summary = getSessionSummary(session);
+  const card = document.createElement("div");
+  card.className = "session-card";
+  card.dataset.id = session.id;
+  if (state.selectMode) card.classList.add("select-mode");
+  if (session._active) card.classList.add("active-card");
+  else if (session.completed) card.classList.add("completed");
+  else card.classList.add("incomplete");
+
+  const scoreText = summary.score !== null ? `${summary.score}%` : "—";
+  const statusLabel = session._active
+    ? "ACTIVE"
+    : session.completed
+      ? "DONE"
+      : "STOPPED";
+  const ticket = getTicketById(session.ticketId);
+  const ticketName = ticket ? ticket.name : "";
+  const ticketOperators = ticket ? ticket.operators : [];
+  const rankLabel = summary.total
+    ? state.historySort === "worst"
+      ? `RISK ${(summary.riskConfidence * 100).toFixed(1)}%`
+      : `QUALITY ${(summary.qualityConfidence * 100).toFixed(1)}%`
+    : state.historySort === "worst"
+      ? "RISK —"
+      : "QUALITY —";
+
+  card.innerHTML = `
+    <div class="session-card-head" data-id="${session.id}">
+      <label class="session-select-wrap" title="Select session">
+        <input class="session-select" type="checkbox" data-select="${session.id}" ${state.selectedSessionIds.includes(session.id) ? "checked" : ""}>
+      </label>
+      <div class="session-status-dot"></div>
+
+      <div class="session-meta-inner">
+        <span class="session-num">${statusLabel} · <span class="session-primary-label">${escHtml(getSessionLabel(session))}</span></span>
+        ${session.title && !summary.totalEvents ? `<span class="session-time-tag">${summary.startedAt}</span>` : ""}
+        ${session.model ? `<span class="session-model-tag">${escHtml(session.model)}</span>` : ""}
+        ${session.color ? `<span class="session-color-tag ${session.color}">● ${session.color.toUpperCase()}</span>` : ""}
+        ${buildCardEventTags(summary.eventCounts)}
+        ${ticketName ? `<span class="session-ticket-tag" title="${escHtml(ticketOperators.length ? `OPERATORS: ${ticketOperators.join(", ")}` : "NO OPERATORS")}">${escHtml(ticketName)}</span>` : ""}
+        ${session.comment ? '<span class="session-comment-tag">COMMENT</span>' : ""}
+        <span class="session-time-tag">${formatTime(summary.elapsed)}</span>
+        <span class="session-rank-tag">${rankLabel}</span>
+        <div class="session-quick-stats">
+          <span class="qs-s">✓ ${summary.successes}</span>
+          <span class="qs-f">✕ ${summary.fails}</span>
+          <span class="session-score-tag ${summary.score !== null && summary.score >= 70 ? "good" : summary.score !== null && summary.score >= 40 ? "mid" : "bad"}">${scoreText}</span>
+        </div>
+      </div>
+
+      <select class="session-inline-ticket" data-inline-ticket="${session.id}" title="Assign ticket">
+        ${buildInlineTicketOptions(session.ticketId)}
+      </select>
+
+      ${!session._active ? `<button class="session-action-btn" data-rename="${session.id}" title="Rename session">Rename</button>` : ""}
+      ${!session._active ? `<button class="session-action-btn danger" data-del="${session.id}" title="Delete session">Delete</button>` : ""}
+      <span class="session-collapse-icon">▼</span>
+    </div>
+    <div class="session-entries">${buildEntriesMarkup(session, summary)}</div>
+  `;
+
+  card
+    .querySelector(".session-card-head")
+    .addEventListener("click", (event) => {
+      if (
+        event.target.closest(".session-action-btn") ||
+        event.target.closest(".session-select-wrap") ||
+        event.target.closest(".session-inline-ticket")
+      )
+        return;
+      card.classList.toggle("expanded");
+    });
+
+  const selectBox = card.querySelector("[data-select]");
+  if (selectBox) {
+    selectBox.addEventListener("click", (event) => event.stopPropagation());
+    selectBox.addEventListener("change", () =>
+      toggleSessionSelection(session.id),
+    );
+  }
+
+  const inlineGroup = card.querySelector("[data-inline-ticket]");
+  if (inlineGroup) {
+    inlineGroup.addEventListener("click", (event) => event.stopPropagation());
+    inlineGroup.addEventListener("change", (event) => {
+      event.stopPropagation();
+      const value = event.target.value;
+      if (value === "__new__") {
+        event.target.value = session.ticketId || "";
+        openTicketModal("single", session.id);
+        return;
+      }
+      setSessionTicket(session.id, value);
+    });
+  }
+
+  const deleteButton = card.querySelector("[data-del]");
+  if (deleteButton) {
+    deleteButton.addEventListener("click", (event) => {
+      event.stopPropagation();
+      event.preventDefault();
+      deleteSession(session.id);
+    });
+  }
+
+  const renameButton = card.querySelector("[data-rename]");
+  if (renameButton) {
+    renameButton.addEventListener("click", (event) => {
+      event.stopPropagation();
+      event.preventDefault();
+      openRenameModal(session.id);
+    });
+  }
+
+  const resumeButton = card.querySelector("[data-resume]");
+  if (resumeButton) {
+    resumeButton.addEventListener("click", (event) => {
+      event.stopPropagation();
+      resumeSession(session.id);
+    });
+  }
+
+  const commentInput = card.querySelector("[data-comment]");
+  const commentMeta = card.querySelector("[data-comment-meta]");
+  if (commentInput) {
+    commentInput.addEventListener("click", (event) => event.stopPropagation());
+    commentInput.addEventListener("keydown", (event) =>
+      event.stopPropagation(),
+    );
+    commentInput.addEventListener("input", (event) => {
+      event.stopPropagation();
+      const value = event.target.value;
+      if (commentMeta)
+        commentMeta.textContent = `${value.length}/${COMMENT_MAX_LENGTH}`;
+      setSessionComment(session.id, value);
+    });
+  }
+
+  return card;
+}
+
+function renderHistory() {
+  pruneSelection();
+  const list = document.getElementById("history-list");
+  const empty = document.getElementById("history-empty");
+  const items = getFilteredRenderableSessions();
+  updateHistoryTabCounts();
+  updateHistoryControls();
+  [...list.querySelectorAll(".session-card")].forEach((card) => card.remove());
+  if (!items.length) {
+    empty.style.display = "block";
+    empty.textContent = getAllRenderableSessions().length
+      ? "NO SESSIONS MATCH THIS FILTER"
+      : "NO SESSIONS YET";
+    return;
+  }
+  empty.style.display = "none";
+  items.forEach((session) => list.appendChild(buildSessionCard(session)));
+}
+
+function deleteSession(id) {
+  const index = state.sessions.findIndex((session) => session.id === id);
+  if (index === -1) return;
+  const deletedSession = state.sessions.splice(index, 1)[0];
+  save();
+  renderHistory();
+  queueUndo(
+    { kind: "history-delete", session: deletedSession, index },
+    `Deleted ${getSessionLabel(deletedSession)}`,
+  );
+}
+
+function showDeleteSelectedModal() {
+  const count = state.selectedSessionIds.length;
+  if (!count) return;
+  document.getElementById("delete-selected-count").textContent =
+    `${count} session${count === 1 ? "" : "s"} selected`;
+  document.getElementById("delete-selected-modal").classList.add("visible");
+  updateModalScrollLock();
+  document.getElementById("delete-selected-confirm").focus();
+}
+
+function hideDeleteSelectedModal() {
+  document.getElementById("delete-selected-modal").classList.remove("visible");
+  updateModalScrollLock();
+}
+
+function deleteSelectedSessions() {
+  const ids = new Set(state.selectedSessionIds);
+  if (!ids.size) return;
+  const removedArchived = [];
+  state.sessions = state.sessions.filter((session, index) => {
+    if (!ids.has(session.id)) return true;
+    removedArchived.push({ session: cloneSession(session), index });
+    return false;
+  });
+  let removedCurrent = null;
+  if (state.currentSession && ids.has(state.currentSession.id)) {
+    pauseTimer();
+    removedCurrent = cloneSession({
+      ...state.currentSession,
+      elapsedAtSave: state.elapsed,
+    });
+    state.currentSession = null;
+    state.elapsed = 0;
+    updateTimerDisplay();
+    updateStats();
+    updateButtons(false);
+    updateTitleUI();
+  }
+  const removedCount = removedArchived.length + (removedCurrent ? 1 : 0);
+  if (!removedCount) return;
+  state.selectedSessionIds = [];
+  closeSelectionSummaryModal();
+  save();
+  renderHistory();
+  queueUndo(
+    { kind: "bulk-delete", removedArchived, removedCurrent },
+    `Deleted ${removedCount} session${removedCount === 1 ? "" : "s"}`,
+  );
+}
+
+function openColorSelectRow() {
+  document.getElementById("color-select-row").classList.add("visible");
+  document.getElementById("btn-new").classList.add("active");
+}
+
+function closeColorSelectRow() {
+  document.getElementById("color-select-row").classList.remove("visible");
+  document.getElementById("btn-new").classList.remove("active");
+}
+
+function toggleColorSelectRow() {
+  const isVisible = document
+    .getElementById("color-select-row")
+    .classList.contains("visible");
+  if (isVisible) closeColorSelectRow();
+  else openColorSelectRow();
+}
+
+function getTicketSessionCount(ticketId) {
+  return getAllRenderableSessions().filter(
+    (session) => session.ticketId === ticketId,
+  ).length;
+}
+
+function populateDeleteTicketSelect() {
+  const select = document.getElementById("delete-ticket-select");
+  select.innerHTML =
+    '<option value="">SELECT A TICKET</option>' +
+    state.tickets
+      .map((ticket) => {
+        const count = getTicketSessionCount(ticket.id);
+        return `<option value="${escHtml(ticket.id)}">${escHtml(ticket.name)} (${count} SESSION${count === 1 ? "" : "S"})</option>`;
+      })
+      .join("");
+}
+
+function updateDeleteTicketModalState() {
+  const select = document.getElementById("delete-ticket-select");
+  const note = document.getElementById("delete-ticket-note");
+  const confirmBtn = document.getElementById("delete-ticket-confirm");
+  const ticketId = select.value;
+  if (!ticketId) {
+    note.textContent = state.tickets.length
+      ? "Only empty tickets can be deleted."
+      : "No tickets exist yet.";
+    note.classList.remove("error");
+    confirmBtn.disabled = true;
+    return;
+  }
+  const count = getTicketSessionCount(ticketId);
+  if (count > 0) {
+    note.textContent = `This ticket still has ${count} session${count === 1 ? "" : "s"}. Move or delete them first.`;
+    note.classList.add("error");
+    confirmBtn.disabled = true;
+  } else {
+    note.textContent = "This ticket is empty and can be deleted.";
+    note.classList.remove("error");
+    confirmBtn.disabled = false;
+  }
+}
+
+function openDeleteTicketModal() {
+  populateDeleteTicketSelect();
+  updateDeleteTicketModalState();
+  document.getElementById("delete-ticket-modal").classList.add("visible");
+  updateModalScrollLock();
+  document.getElementById("delete-ticket-select").focus();
+}
+
+function closeDeleteTicketModal() {
+  document.getElementById("delete-ticket-modal").classList.remove("visible");
+  updateModalScrollLock();
+}
+
+function confirmDeleteTicket() {
+  const ticketId = document.getElementById("delete-ticket-select").value;
+  if (!ticketId) return;
+  if (getTicketSessionCount(ticketId) > 0) {
+    updateDeleteTicketModalState();
+    return;
+  }
+  state.tickets = state.tickets.filter((ticket) => ticket.id !== ticketId);
+  if (state.historyTicketFilter === ticketId) state.historyTicketFilter = "all";
+  save();
+  closeDeleteTicketModal();
+  renderHistory();
+}
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function setModel(name) {
+  state.currentModel = String(name || "").trim();
+  if (state.currentSession) state.currentSession.model = state.currentModel;
+  updateModelUI();
+  save();
+  renderHistory();
+}
+
+function updateModelUI() {
+  const display = document.getElementById("session-model-display");
+  const editWrap = document.getElementById("session-model-edit-wrap");
+  editWrap.classList.remove("visible");
+  if (state.currentModel) {
+    display.textContent = state.currentModel;
+    display.classList.remove("placeholder");
+  } else {
+    display.textContent = "+ SET DEFAULT MODEL";
+    display.classList.add("placeholder");
+  }
+  display.style.display = "";
+}
+
+function openModelEdit() {
+  const display = document.getElementById("session-model-display");
+  const editWrap = document.getElementById("session-model-edit-wrap");
+  const input = document.getElementById("session-model-input");
+  display.style.display = "none";
+  editWrap.classList.add("visible");
+  input.value = state.currentModel || "";
+  input.focus();
+  input.select();
+}
+
+function commitModelEdit() {
+  setModel(document.getElementById("session-model-input").value);
+}
+
+function cancelModelEdit() {
+  updateModelUI();
+}
+
+function updateTitleUI() {
+  const display = document.getElementById("session-title-display");
+  const editWrap = document.getElementById("session-title-edit-wrap");
+  editWrap.classList.remove("visible");
+  if (!state.currentSession) {
+    display.textContent = "START A SESSION TO ADD TITLE";
+    display.classList.add("placeholder", "disabled");
+    display.style.display = "";
+    return;
+  }
+  const title = state.currentSession.title || "";
+  display.classList.remove("disabled");
+  if (title) {
+    display.textContent = title;
+    display.classList.remove("placeholder");
+  } else {
+    display.textContent = "+ ADD SESSION TITLE";
+    display.classList.add("placeholder");
+  }
+  display.style.display = "";
+}
+
+function openTitleEdit() {
+  if (!state.currentSession) return;
+  const display = document.getElementById("session-title-display");
+  const editWrap = document.getElementById("session-title-edit-wrap");
+  const input = document.getElementById("session-title-input");
+  display.style.display = "none";
+  editWrap.classList.add("visible");
+  input.value = state.currentSession.title || "";
+  input.focus();
+  input.select();
+}
+
+function commitTitleEdit() {
+  if (!state.currentSession) return;
+  state.currentSession.title = document
+    .getElementById("session-title-input")
+    .value.trim();
+  save();
+  renderHistory();
+  updateTitleUI();
+}
+
+function cancelTitleEdit() {
+  updateTitleUI();
+}
+
+function openRenameModal(id) {
+  const session = state.sessions.find((item) => item.id === id);
+  if (!session) return;
+  renameTargetId = id;
+  document.getElementById("rename-session-input").value = session.title || "";
+  document.getElementById("rename-modal").classList.add("visible");
+  updateModalScrollLock();
+  document.getElementById("rename-session-input").focus();
+  document.getElementById("rename-session-input").select();
+}
+
+function closeRenameModal() {
+  renameTargetId = null;
+  document.getElementById("rename-modal").classList.remove("visible");
+  updateModalScrollLock();
+}
+
+function commitRenameModal() {
+  if (!renameTargetId) return;
+  const session = state.sessions.find((item) => item.id === renameTargetId);
+  if (!session) {
+    closeRenameModal();
+    return;
+  }
+  session.title = document.getElementById("rename-session-input").value.trim();
+  save();
+  renderHistory();
+  closeRenameModal();
+}
+
+function populateTicketModalSelect() {
+  const select = document.getElementById("ticket-modal-select");
+  const currentValue = select.value;
+  select.innerHTML =
+    '<option value="">SELECT A TICKET</option><option value="ungrouped">NO TICKET</option>' +
+    state.tickets
+      .map(
+        (ticket) =>
+          `<option value="${escHtml(ticket.id)}">${escHtml(ticket.name)}</option>`,
+      )
+      .join("");
+  if ([...select.options].some((option) => option.value === currentValue))
+    select.value = currentValue;
+}
+
+function syncTicketModalOperators() {
+  const select = document.getElementById("ticket-modal-select");
+  const operatorsInput = document.getElementById("ticket-modal-operators");
+  const ticket = getTicketById(select.value);
+  operatorsInput.value = ticket ? ticket.operators.join(", ") : "";
+}
+
+function openTicketModal(mode, targetSessionId = null) {
+  ticketModalMode = mode;
+  ticketModalTargetId = targetSessionId;
+  populateTicketModalSelect();
+
+  const modalTitle = document.getElementById("ticket-modal-title");
+  const confirmBtn = document.getElementById("ticket-modal-confirm");
+  const input = document.getElementById("ticket-modal-input");
+  const select = document.getElementById("ticket-modal-select");
+
+  input.value = "";
+  select.value = "";
+
+  if (mode === "assign") {
+    modalTitle.textContent = "Add Selected to Ticket";
+    confirmBtn.textContent = "Apply";
+  } else if (mode === "single") {
+    modalTitle.textContent = "Set Session Ticket";
+    confirmBtn.textContent = "Save";
+    const session = getStoredSessionById(targetSessionId);
+    if (session && session.ticketId) select.value = session.ticketId;
+    if (session && !session.ticketId) select.value = "ungrouped";
+  } else {
+    modalTitle.textContent = "Create Ticket";
+    confirmBtn.textContent = "Create";
+  }
+  syncTicketModalOperators();
+
+  document.getElementById("ticket-modal").classList.add("visible");
+  updateModalScrollLock();
+  if (mode === "create") input.focus();
+  else select.focus();
+}
+
+function closeTicketModal() {
+  ticketModalTargetId = null;
+  document.getElementById("ticket-modal").classList.remove("visible");
+  updateModalScrollLock();
+}
+
+function getSelectedStoredSessions() {
+  const ids = new Set(state.selectedSessionIds);
+  const selected = [];
+  if (state.currentSession && ids.has(state.currentSession.id))
+    selected.push(state.currentSession);
+  state.sessions.forEach((session) => {
+    if (ids.has(session.id)) selected.push(session);
+  });
+  return selected;
+}
+
+function applyTicketFromModal() {
+  const selectValue = document.getElementById("ticket-modal-select").value;
+  const typedName = document.getElementById("ticket-modal-input").value.trim();
+  const operators = parseOperators(
+    document.getElementById("ticket-modal-operators").value,
+  );
+
+  if (ticketModalMode === "create") {
+    const createdId = ensureTicket(typedName);
+    if (!createdId) return;
+    const created = getTicketById(createdId);
+    if (created) created.operators = operators;
+    save();
+    closeTicketModal();
+    renderHistory();
+    return;
+  }
+
+  let ticketId = "";
+  if (typedName) ticketId = ensureTicket(typedName);
+  else if (selectValue === "ungrouped") ticketId = "";
+  else if (selectValue) ticketId = selectValue;
+  else return;
+
+  const targetTicket = getTicketById(ticketId);
+  if (targetTicket) targetTicket.operators = operators;
+
+  let targets = [];
+  if (ticketModalMode === "single") {
+    const session = getStoredSessionById(ticketModalTargetId);
+    if (session) targets = [session];
+  } else {
+    targets = getSelectedStoredSessions();
+  }
+
+  if (!targets.length) return;
+
+  targets.forEach((session) => {
+    session.ticketId = ticketId;
+  });
+
+  save();
+  closeTicketModal();
+  renderHistory();
+}
+
+function showEraseModal() {
+  if (!state.currentSession) return;
+  const label = getSessionLabel(state.currentSession);
+  document.getElementById("erase-modal-session-name").textContent =
+    `${label}${state.currentSession.entries.length ? ` · ${state.currentSession.entries.length} entries` : " · no entries"}`;
+  document.getElementById("erase-modal").classList.add("visible");
+  updateModalScrollLock();
+  document.getElementById("erase-modal-confirm").focus();
+}
+
+function hideEraseModal() {
+  document.getElementById("erase-modal").classList.remove("visible");
+  updateModalScrollLock();
+}
+
+function queueUndo(payload, message) {
+  clearUndo(false);
+  const toast = document.getElementById("undo-toast");
+  const body = document.getElementById("undo-toast-body");
+  const fill = document.getElementById("undo-timer-fill");
+  body.textContent = `${message}. Undo available for ${Math.floor(UNDO_WINDOW_MS / 1000)} seconds.`;
+  toast.classList.add("visible");
+  fill.style.transition = "none";
+  fill.style.width = "100%";
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      fill.style.transition = `width ${UNDO_WINDOW_MS}ms linear`;
+      fill.style.width = "0%";
+    });
+  });
+  undoState = {
+    payload,
+    timeoutId: setTimeout(() => clearUndo(), UNDO_WINDOW_MS),
+  };
+}
+
+function clearUndo(resetBar = true) {
+  if (undoState && undoState.timeoutId) clearTimeout(undoState.timeoutId);
+  undoState = null;
+  document.getElementById("undo-toast").classList.remove("visible");
+  if (resetBar) {
+    const fill = document.getElementById("undo-timer-fill");
+    fill.style.transition = "none";
+    fill.style.width = "100%";
+  }
+}
+
+function undoLastRemoval() {
+  if (!undoState) return;
+  const payload = undoState.payload;
+  clearUndo();
+  if (payload.kind === "current-erase") {
+    if (state.currentSession) {
+      state.currentSession.completed = false;
+      state.currentSession.elapsedAtSave = state.elapsed;
+      archiveCurrentSession();
+    }
+    pauseTimer();
+    state.currentSession = normalizeSession(payload.session);
+    state.elapsed = payload.session.elapsedAtSave || 0;
+    state.running = false;
+    updateTimerDisplay();
+    updateStats();
+    updateButtons(false);
+    updateTitleUI();
+    updateModelUI();
+    renderHistory();
+    save();
+    return;
+  }
+  if (payload.kind === "history-delete") {
+    const index = Math.max(0, Math.min(payload.index, state.sessions.length));
+    state.sessions.splice(index, 0, normalizeSession(payload.session));
+    save();
+    renderHistory();
+    return;
+  }
+  if (payload.kind === "bulk-delete") {
+    [...payload.removedArchived]
+      .sort((a, b) => a.index - b.index)
+      .forEach(({ session, index }) => {
+        state.sessions.splice(
+          Math.max(0, Math.min(index, state.sessions.length)),
+          0,
+          normalizeSession(session),
+        );
+      });
+    if (payload.removedCurrent) {
+      if (state.currentSession) {
+        state.currentSession.completed = false;
+        state.currentSession.elapsedAtSave = state.elapsed;
+        archiveCurrentSession();
+      }
+      pauseTimer();
+      state.currentSession = normalizeSession(payload.removedCurrent);
+      state.elapsed = payload.removedCurrent.elapsedAtSave || 0;
+      state.running = false;
+      updateTimerDisplay();
+      updateStats();
+      updateButtons(false);
+      updateTitleUI();
+      updateModelUI();
+    }
+    save();
+    renderHistory();
+  }
+}
+
+function setHistoryFilter(filter) {
+  state.historyFilter = filter;
+  save();
+  renderHistory();
+}
+
+function setHistoryQuery(query) {
+  state.historyQuery = query;
+  save();
+  renderHistory();
+}
+
+function setHistoryTicketFilter(ticketId) {
+  state.historyTicketFilter = ticketId;
+  save();
+  renderHistory();
+}
+
+function setHistorySort(sort) {
+  state.historySort = sort;
+  save();
+  renderHistory();
+}
+
+function getExportRows() {
+  return getExportSessions().map((session) => {
+    const summary = getSessionSummary(session);
+    const ticket = getTicketById(session.ticketId);
+    return {
+      session_id: session.id,
+      status: getSessionStatus(session).toUpperCase(),
+      title: session.title || "",
+      display_label: getSessionLabel(session),
+      model: session.model || "",
+      color: session.color || "",
+      ticket: getTicketName(session.ticketId),
+      ticket_operators: ticket ? ticket.operators.join(", ") : "",
+      comment: session.comment || "",
+      started_at: session.startedAt || "",
+      target_duration_seconds: getSessionTargetDuration(session),
+      duration_seconds: summary.elapsed,
+      duration_display: formatTime(summary.elapsed),
+      successes: summary.successes,
+      fails: summary.fails,
+      total: summary.total,
+      score_percent: summary.score !== null ? summary.score : "",
+      quality_confidence_percent: summary.total
+        ? Number((summary.qualityConfidence * 100).toFixed(2))
+        : "",
+      risk_confidence_percent: summary.total
+        ? Number((summary.riskConfidence * 100).toFixed(2))
+        : "",
+      wilson_lower_percent: summary.total
+        ? Number((summary.wilsonLower * 100).toFixed(2))
+        : "",
+      rate_per_minute: Number(summary.ratePerMinute.toFixed(4)),
+      events: EVENT_TYPES.filter((type) => summary.eventCounts[type.id])
+        .map((type) => `${type.id}:${summary.eventCounts[type.id]}`)
+        .join("|"),
+      total_events: summary.totalEvents,
+      entries: session.entries
+        .map(
+          (entry) =>
+            `${entry.type === "event" ? `EVENT:${entry.name.toUpperCase()}` : entry.type.toUpperCase()}@${entry.ts}`,
+        )
+        .join(" | "),
+      entries_json: JSON.stringify(session.entries),
+    };
+  });
+}
+
+function escapeCsv(value) {
+  const normalized = value == null ? "" : String(value);
+  const needsQuotes =
+    normalized.includes(",") ||
+    normalized.includes('"') ||
+    normalized.includes("\n");
+  return needsQuotes ? `"${normalized.replace(/"/g, '""')}"` : normalized;
+}
+
+function downloadFile(content, filename, mimeType) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function exportCsv() {
+  const rows = getExportRows();
+  if (!rows.length) return;
+  const headers = Object.keys(rows[0]);
+  const csv = [headers.join(",")]
+    .concat(
+      rows.map((row) =>
+        headers.map((header) => escapeCsv(row[header])).join(","),
+      ),
+    )
+    .join("\n");
+  downloadFile(csv, "robot_eval_export.csv", "text/csv;charset=utf-8;");
+}
+
+function exportJson() {
+  const sessions = getExportSessions().map((session) => {
+    const summary = getSessionSummary(session);
+    return {
+      ...cloneSession(session),
+      status: getSessionStatus(session),
+      elapsed: session._active ? state.elapsed : session.elapsedAtSave || 0,
+      ticketName: getTicketName(session.ticketId),
+      ticketOperators: (() => {
+        const ticket = getTicketById(session.ticketId);
+        return ticket ? ticket.operators : [];
+      })(),
+      targetDuration: getSessionTargetDuration(session),
+      wilsonLower: Number(summary.wilsonLower.toFixed(6)),
+      qualityConfidence: Number(summary.qualityConfidence.toFixed(6)),
+      riskConfidence: Number(summary.riskConfidence.toFixed(6)),
+      ratePerMinute: Number(summary.ratePerMinute.toFixed(6)),
+    };
+  });
+  if (!sessions.length) return;
+  downloadFile(
+    JSON.stringify(sessions, null, 2),
+    "robot_eval_export.json",
+    "application/json;charset=utf-8;",
+  );
+}
+
+function exportHistory(type) {
+  if (type === "csv") exportCsv();
+  if (type === "json") exportJson();
+}
+
+document.getElementById("btn-play").addEventListener("click", () => {
+  if (!state.currentSession) return;
+  startTimer();
+  updateButtons(true);
+});
+
+document.getElementById("btn-pause").addEventListener("click", () => {
+  pauseTimer();
+  updateButtons(false);
+});
+
+document
+  .getElementById("btn-finish")
+  .addEventListener("click", completeSession);
+document.getElementById("btn-stop").addEventListener("click", stopSession);
+document.getElementById("btn-erase").addEventListener("click", showEraseModal);
+document
+  .getElementById("btn-new")
+  .addEventListener("click", toggleColorSelectRow);
+
+document.querySelectorAll("[data-session-color]").forEach((button) => {
+  button.addEventListener("click", () => {
+    closeColorSelectRow();
+    newSession(button.dataset.sessionColor);
+  });
+});
+document
+  .getElementById("color-select-cancel")
+  .addEventListener("click", closeColorSelectRow);
+
+document.getElementById("btn-success").addEventListener("click", () => {
+  recordVerdict("success");
+  renderHistory();
+});
+
+document.getElementById("btn-fail").addEventListener("click", () => {
+  recordVerdict("fail");
+  renderHistory();
+});
+
+document.querySelectorAll(".duration-btn").forEach((button) => {
+  button.addEventListener("click", () =>
+    setDefaultDuration(Number(button.dataset.duration)),
+  );
+});
+
+document.getElementById("duration-set-btn").addEventListener("click", () => {
+  const minutes = Number(document.getElementById("duration-input").value);
+  if (!Number.isFinite(minutes) || minutes <= 0) return;
+  setDefaultDuration(minutes * 60);
+});
+
+document
+  .getElementById("duration-input")
+  .addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      const minutes = Number(document.getElementById("duration-input").value);
+      if (!Number.isFinite(minutes) || minutes <= 0) return;
+      setDefaultDuration(minutes * 60);
+    }
+  });
+
+document.addEventListener("keydown", (event) => {
+  if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName))
+    return;
+  if (!event.metaKey && !event.ctrlKey && !event.altKey && !event.repeat) {
+    const eventType = EVENT_TYPES.find(
+      (type) => type.key === event.key.toLowerCase(),
+    );
+    if (eventType) {
+      if (state.running && state.currentSession) {
+        event.preventDefault();
+        recordEvent(eventType.id);
+      }
+      return;
+    }
+  }
+  if (event.key === "ArrowRight") {
+    event.preventDefault();
+    if (!document.getElementById("btn-success").disabled) {
+      recordVerdict("success");
+      renderHistory();
+    }
+  } else if (event.key === "ArrowLeft") {
+    event.preventDefault();
+    if (!document.getElementById("btn-fail").disabled) {
+      recordVerdict("fail");
+      renderHistory();
+    }
+  } else if (
+    event.key === "Escape" &&
+    document.getElementById("erase-modal").classList.contains("visible")
+  ) {
+    hideEraseModal();
+  } else if (
+    event.key === "Escape" &&
+    document.getElementById("rename-modal").classList.contains("visible")
+  ) {
+    closeRenameModal();
+  } else if (
+    event.key === "Escape" &&
+    document.getElementById("ticket-modal").classList.contains("visible")
+  ) {
+    closeTicketModal();
+  } else if (
+    event.key === "Escape" &&
+    document
+      .getElementById("selection-summary-modal")
+      .classList.contains("visible")
+  ) {
+    closeSelectionSummaryModal();
+  } else if (
+    event.key === "Escape" &&
+    document.getElementById("color-select-row").classList.contains("visible")
+  ) {
+    closeColorSelectRow();
+  } else if (
+    event.key === "Escape" &&
+    document.getElementById("delete-ticket-modal").classList.contains("visible")
+  ) {
+    closeDeleteTicketModal();
+  } else if (
+    event.key === "Escape" &&
+    document
+      .getElementById("delete-selected-modal")
+      .classList.contains("visible")
+  ) {
+    hideDeleteSelectedModal();
+  } else if (
+    (event.key === "z" || event.key === "Z") &&
+    (event.metaKey || event.ctrlKey) &&
+    undoState
+  ) {
+    event.preventDefault();
+    undoLastRemoval();
+  }
+});
+
+document
+  .getElementById("session-model-display")
+  .addEventListener("click", openModelEdit);
+document
+  .getElementById("model-confirm-btn")
+  .addEventListener("click", commitModelEdit);
+document
+  .getElementById("model-cancel-btn")
+  .addEventListener("click", cancelModelEdit);
+document
+  .getElementById("session-model-input")
+  .addEventListener("keydown", (event) => {
+    if (event.key === "Enter") commitModelEdit();
+    if (event.key === "Escape") cancelModelEdit();
+  });
+
+document
+  .getElementById("session-title-display")
+  .addEventListener("click", openTitleEdit);
+document
+  .getElementById("title-confirm-btn")
+  .addEventListener("click", commitTitleEdit);
+document
+  .getElementById("title-cancel-btn")
+  .addEventListener("click", cancelTitleEdit);
+document
+  .getElementById("session-title-input")
+  .addEventListener("keydown", (event) => {
+    if (event.key === "Enter") commitTitleEdit();
+    if (event.key === "Escape") cancelTitleEdit();
+  });
+
+document
+  .getElementById("erase-modal-cancel")
+  .addEventListener("click", hideEraseModal);
+document.getElementById("erase-modal-confirm").addEventListener("click", () => {
+  hideEraseModal();
+  eraseCurrentSession();
+});
+document.getElementById("erase-modal").addEventListener("click", (event) => {
+  if (event.target === document.getElementById("erase-modal")) hideEraseModal();
+});
+
+document.querySelectorAll(".history-tab").forEach((button) => {
+  button.addEventListener("click", () =>
+    setHistoryFilter(button.dataset.filter),
+  );
+});
+
+document
+  .getElementById("history-search")
+  .addEventListener("input", (event) => setHistoryQuery(event.target.value));
+document
+  .getElementById("history-ticket-filter")
+  .addEventListener("change", (event) =>
+    setHistoryTicketFilter(event.target.value),
+  );
+document
+  .getElementById("history-sort")
+  .addEventListener("change", (event) => setHistorySort(event.target.value));
+document
+  .getElementById("select-mode-btn")
+  .addEventListener("click", toggleSelectMode);
+document
+  .getElementById("select-visible-btn")
+  .addEventListener("click", selectVisibleSessions);
+document.getElementById("clear-selection-btn").addEventListener("click", () => {
+  clearSelection();
+  updateHistoryControls();
+  renderHistory();
+});
+document
+  .getElementById("assign-ticket-btn")
+  .addEventListener("click", () => openTicketModal("assign"));
+document
+  .getElementById("summarize-selected-btn")
+  .addEventListener("click", openSelectionSummaryModal);
+document
+  .getElementById("new-ticket-btn")
+  .addEventListener("click", () => openTicketModal("create"));
+document
+  .getElementById("delete-ticket-btn")
+  .addEventListener("click", openDeleteTicketModal);
+document
+  .getElementById("delete-ticket-cancel")
+  .addEventListener("click", closeDeleteTicketModal);
+document
+  .getElementById("delete-ticket-confirm")
+  .addEventListener("click", confirmDeleteTicket);
+document
+  .getElementById("delete-ticket-select")
+  .addEventListener("change", updateDeleteTicketModalState);
+document
+  .getElementById("delete-ticket-modal")
+  .addEventListener("click", (event) => {
+    if (event.target === document.getElementById("delete-ticket-modal"))
+      closeDeleteTicketModal();
+  });
+document
+  .getElementById("delete-selected-btn")
+  .addEventListener("click", showDeleteSelectedModal);
+document
+  .getElementById("delete-selected-cancel")
+  .addEventListener("click", hideDeleteSelectedModal);
+document
+  .getElementById("delete-selected-confirm")
+  .addEventListener("click", () => {
+    hideDeleteSelectedModal();
+    deleteSelectedSessions();
+  });
+document
+  .getElementById("delete-selected-modal")
+  .addEventListener("click", (event) => {
+    if (event.target === document.getElementById("delete-selected-modal"))
+      hideDeleteSelectedModal();
+  });
+
+document.querySelectorAll("[data-export]").forEach((button) => {
+  button.addEventListener("click", () => exportHistory(button.dataset.export));
+});
+
+document
+  .getElementById("rename-modal-cancel")
+  .addEventListener("click", closeRenameModal);
+document
+  .getElementById("rename-modal-confirm")
+  .addEventListener("click", commitRenameModal);
+document.getElementById("rename-modal").addEventListener("click", (event) => {
+  if (event.target === document.getElementById("rename-modal"))
+    closeRenameModal();
+});
+document
+  .getElementById("rename-session-input")
+  .addEventListener("keydown", (event) => {
+    if (event.key === "Enter") commitRenameModal();
+    if (event.key === "Escape") closeRenameModal();
+  });
+
+document
+  .getElementById("ticket-modal-cancel")
+  .addEventListener("click", closeTicketModal);
+document
+  .getElementById("ticket-modal-confirm")
+  .addEventListener("click", applyTicketFromModal);
+document.getElementById("ticket-modal").addEventListener("click", (event) => {
+  if (event.target === document.getElementById("ticket-modal"))
+    closeTicketModal();
+});
+document
+  .getElementById("ticket-modal-input")
+  .addEventListener("keydown", (event) => {
+    if (event.key === "Enter") applyTicketFromModal();
+    if (event.key === "Escape") closeTicketModal();
+  });
+document
+  .getElementById("ticket-modal-select")
+  .addEventListener("keydown", (event) => {
+    if (event.key === "Enter") applyTicketFromModal();
+    if (event.key === "Escape") closeTicketModal();
+  });
+document
+  .getElementById("ticket-modal-select")
+  .addEventListener("change", syncTicketModalOperators);
+document
+  .getElementById("ticket-modal-operators")
+  .addEventListener("keydown", (event) => {
+    if (event.key === "Enter") applyTicketFromModal();
+    if (event.key === "Escape") closeTicketModal();
+  });
+
+document
+  .getElementById("selection-summary-close")
+  .addEventListener("click", closeSelectionSummaryModal);
+document
+  .getElementById("selection-summary-copy")
+  .addEventListener("click", copySelectionSummary);
+document.querySelectorAll(".summary-table th.sortable").forEach((th) => {
+  th.addEventListener("click", () =>
+    handleSummaryHeaderClick(th.dataset.table, th.dataset.sort),
+  );
+});
+document
+  .getElementById("selection-summary-graph-metric")
+  .addEventListener("change", (event) => {
+    summaryGraphMetric = event.target.value;
+    refreshSelectionSummaryModal();
+  });
+document
+  .getElementById("selection-summary-view-list")
+  .addEventListener("click", () => {
+    summaryViewMode = "list";
+    refreshSelectionSummaryModal();
+  });
+document
+  .getElementById("selection-summary-view-chart")
+  .addEventListener("click", () => {
+    summaryViewMode = "chart";
+    refreshSelectionSummaryModal();
+  });
+document
+  .getElementById("selection-summary-view-models")
+  .addEventListener("click", () => {
+    summaryViewMode = "models";
+    refreshSelectionSummaryModal();
+  });
+document
+  .getElementById("selection-summary-modal")
+  .addEventListener("click", (event) => {
+    if (event.target === document.getElementById("selection-summary-modal"))
+      closeSelectionSummaryModal();
+  });
+
+document
+  .getElementById("undo-toast-btn")
+  .addEventListener("click", undoLastRemoval);
+
+setInterval(() => {
+  if (state.currentSession) {
+    state.currentSession.elapsedAtSave = state.elapsed;
+    save();
+  }
+}, 3000);
+
+renderEventButtons();
+load();
+updateTimerDisplay();
+updateStats();
+updateButtons(false);
+updateTitleUI();
+updateModelUI();
+renderHistory();
+updateModalScrollLock();
+if (state.currentSession) updateButtons(false);

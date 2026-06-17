@@ -1,0 +1,83 @@
+.stopwatchBlock {
+  text-align: center;
+  padding: 28px 0 20px;
+  position: relative;
+}
+
+.label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  color: var(--text-dimmer);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.colorTag {
+  font-family: var(--mono);
+}
+.colorTag.red {
+  color: var(--fail);
+}
+.colorTag.yellow {
+  color: var(--warn);
+}
+.colorTag.blue {
+  color: var(--blue);
+}
+
+.timer {
+  font-family: var(--mono);
+  font-size: 72px;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+  line-height: 1;
+  text-shadow: 0 0 40px rgba(0, 229, 255, 0.3);
+  transition: color 0.3s;
+}
+
+.timerWarn {
+  color: var(--warn);
+  text-shadow: 0 0 40px rgba(255, 170, 0, 0.3);
+}
+.timerDanger {
+  color: var(--fail);
+  text-shadow: 0 0 40px rgba(255, 51, 85, 0.4);
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.progressWrap {
+  width: 100%;
+  height: 3px;
+  background: var(--border);
+  margin-top: 14px;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress {
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition:
+    width 0.5s linear,
+    background 0.5s;
+}
+
+.barWarn {
+  background: var(--warn);
+}
+.barDanger {
+  background: var(--fail);
+}

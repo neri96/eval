@@ -1,0 +1,17 @@
+.headerBar {
+  border-bottom: 1px solid var(--border);
+  padding: 10px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--surface);
+}
+
+.logo {
+  font-family: var(--sans);
+  font-weight: 900;
+  font-size: 18px;
+  letter-spacing: 0.25em;
+  color: var(--accent);
+  text-transform: uppercase;
+}

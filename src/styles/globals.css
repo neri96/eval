@@ -1,0 +1,61 @@
+:root {
+  --bg: #0a0a0c;
+  --surface: #111116;
+  --surface2: #18181f;
+  --border: #2a2a38;
+  --border-bright: #44445a;
+  --text: #e8e8f0;
+  --text-dim: #ccc;
+  --text-dimmer: #666;
+  --accent: #00e5ff;
+  --accent-dim: rgba(0, 229, 255, 0.12);
+  --success: #00ff88;
+  --success-dim: rgba(0, 255, 136, 0.12);
+  --fail: #ff3355;
+  --fail-dim: rgba(255, 51, 85, 0.12);
+  --warn: #ffaa00;
+  --blue: #4f7dff;
+  --blue-dim: rgba(79, 125, 255, 0.12);
+  --ev-collision: #ff6a3d;
+  --ev-dropped: #c084fc;
+  --ev-phantom: #94a3b8;
+  --ev-shaky: #2dd4bf;
+  --ev-random: #a3e635;
+  --mono: "Share Tech Mono", monospace;
+  --sans: "Barlow Condensed", sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+body.modal-open {
+  overflow: hidden;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.04) 2px,
+    rgba(0, 0, 0, 0.04) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}

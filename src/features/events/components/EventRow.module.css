@@ -1,0 +1,91 @@
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--text-dimmer);
+  text-transform: uppercase;
+  margin-right: 4px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-bright);
+  background: var(--surface2);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.btn kbd {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-bright);
+  border-radius: 3px;
+  padding: 1px 6px;
+  font-size: 10px;
+}
+
+.btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+@keyframes eventFlash {
+  0% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.flash {
+  animation: eventFlash 0.22s ease-out;
+}
+
+.collision:not(:disabled):hover,
+.collision.flash {
+  border-color: var(--ev-collision);
+  color: var(--ev-collision);
+  background: rgba(255, 106, 61, 0.12);
+}
+.dropped:not(:disabled):hover,
+.dropped.flash {
+  border-color: var(--ev-dropped);
+  color: var(--ev-dropped);
+  background: rgba(192, 132, 252, 0.12);
+}
+.phantom:not(:disabled):hover,
+.phantom.flash {
+  border-color: var(--ev-phantom);
+  color: var(--ev-phantom);
+  background: rgba(148, 163, 184, 0.12);
+}
+.shaky:not(:disabled):hover,
+.shaky.flash {
+  border-color: var(--ev-shaky);
+  color: var(--ev-shaky);
+  background: rgba(45, 212, 191, 0.12);
+}
+.random:not(:disabled):hover,
+.random.flash {
+  border-color: var(--ev-random);
+  color: var(--ev-random);
+  background: rgba(163, 230, 53, 0.12);
+}

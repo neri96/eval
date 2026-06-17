@@ -1,0 +1,94 @@
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: -8px 0 20px;
+  animation: colorRowIn 0.18s ease-out;
+}
+
+@keyframes colorRowIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--text-dimmer);
+  text-transform: uppercase;
+}
+
+.option {
+  font-family: var(--sans);
+  font-weight: 900;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 10px 26px;
+  border-radius: 999px;
+  cursor: pointer;
+  background: var(--surface2);
+  transition: all 0.15s;
+}
+
+.option:active {
+  transform: scale(0.96);
+}
+
+.red {
+  border: 2px solid rgba(255, 51, 85, 0.35);
+  color: var(--fail);
+}
+.red:hover {
+  background: rgba(255, 51, 85, 0.18);
+  border-color: var(--fail);
+  box-shadow: 0 0 24px rgba(255, 51, 85, 0.2);
+}
+
+.yellow {
+  border: 2px solid rgba(255, 170, 0, 0.35);
+  color: var(--warn);
+}
+.yellow:hover {
+  background: rgba(255, 170, 0, 0.18);
+  border-color: var(--warn);
+  box-shadow: 0 0 24px rgba(255, 170, 0, 0.2);
+}
+
+.blue {
+  border: 2px solid rgba(79, 125, 255, 0.35);
+  color: var(--blue);
+}
+.blue:hover {
+  background: rgba(79, 125, 255, 0.18);
+  border-color: var(--blue);
+  box-shadow: 0 0 24px rgba(79, 125, 255, 0.2);
+}
+
+.cancel {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 10px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border-bright);
+  background: var(--surface2);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.cancel:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-dim);
+}

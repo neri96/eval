@@ -1,0 +1,597 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EVALS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700;900&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="header-bar">
+      <div class="logo">EVALS</div>
+    </div>
+
+    <div class="main">
+      <div class="stopwatch-block">
+        <div class="stopwatch-label" id="timer-label">
+          SESSION TIMER · 05:00
+        </div>
+        <div id="timer-display">05:00</div>
+        <div class="progress-bar-wrap"><div id="progress-bar"></div></div>
+
+        <div class="duration-controls" id="duration-controls">
+          <span class="duration-label">DEFAULT DURATION</span>
+          <div class="duration-presets" id="duration-presets">
+            <button class="duration-btn" data-duration="300" type="button">
+              5m
+            </button>
+            <button class="duration-btn" data-duration="600" type="button">
+              10m
+            </button>
+            <button class="duration-btn" data-duration="900" type="button">
+              15m
+            </button>
+            <button class="duration-btn" data-duration="0" type="button">
+              Unlimited
+            </button>
+          </div>
+          <div class="duration-custom">
+            <input
+              id="duration-input"
+              type="number"
+              min="1"
+              max="180"
+              placeholder="MIN"
+            />
+            <button id="duration-set-btn" type="button">SET</button>
+          </div>
+          <div class="duration-lock-note" id="duration-lock-note"></div>
+        </div>
+
+        <div class="session-meta-grid">
+          <div class="session-meta-card" id="session-title-card">
+            <div class="session-meta-label">SESSION TITLE</div>
+            <button
+              class="session-meta-display placeholder"
+              id="session-title-display"
+              type="button"
+            >
+              START A SESSION TO ADD TITLE
+            </button>
+            <div class="session-meta-edit-wrap" id="session-title-edit-wrap">
+              <input
+                type="text"
+                id="session-title-input"
+                placeholder="SESSION TITLE..."
+                maxlength="60"
+                autocomplete="off"
+              />
+              <button class="title-confirm-btn" id="title-confirm-btn">
+                SET
+              </button>
+              <button class="title-cancel-btn" id="title-cancel-btn">✕</button>
+            </div>
+          </div>
+          <div class="session-meta-card" id="session-model-card">
+            <div class="session-meta-label">MODEL</div>
+            <button
+              class="session-meta-display placeholder"
+              id="session-model-display"
+              type="button"
+            >
+              + SET DEFAULT MODEL
+            </button>
+            <div class="session-meta-edit-wrap" id="session-model-edit-wrap">
+              <input
+                type="text"
+                id="session-model-input"
+                placeholder="MODEL NAME..."
+                maxlength="60"
+                autocomplete="off"
+              />
+              <button class="title-confirm-btn" id="model-confirm-btn">
+                SET
+              </button>
+              <button class="title-cancel-btn" id="model-cancel-btn">✕</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="ctrl-btn" id="btn-play">▶ PLAY</button>
+        <button class="ctrl-btn" id="btn-pause" disabled>⏸ PAUSE</button>
+        <button class="ctrl-btn success-btn" id="btn-finish" disabled>
+          ✓ FINISH
+        </button>
+        <button class="ctrl-btn danger-btn" id="btn-stop" disabled>
+          ■ STOP
+        </button>
+        <button class="ctrl-btn danger-btn" id="btn-erase" disabled>
+          ⌫ ERASE
+        </button>
+        <button class="ctrl-btn new-btn" id="btn-new">+ NEW SESSION</button>
+      </div>
+
+      <div class="color-select-row" id="color-select-row">
+        <span class="color-select-label">SELECT COLOR</span>
+        <button
+          class="color-option-btn red"
+          data-session-color="red"
+          type="button"
+        >
+          RED
+        </button>
+        <button
+          class="color-option-btn yellow"
+          data-session-color="yellow"
+          type="button"
+        >
+          YELLOW
+        </button>
+        <button
+          class="color-option-btn blue"
+          data-session-color="blue"
+          type="button"
+        >
+          BLUE
+        </button>
+        <button
+          class="history-utility-btn"
+          id="color-select-cancel"
+          type="button"
+        >
+          ✕ CANCEL
+        </button>
+      </div>
+
+      <div class="eval-area">
+        <button class="verdict-btn" id="btn-fail" disabled>
+          ✕ FAIL
+          <span class="key-hint">← LEFT ARROW</span>
+        </button>
+
+        <div class="stats-panel">
+          <div class="stat-row">
+            <span class="stat-label">SUCCESS</span>
+            <span class="stat-value success-val" id="stat-success">0</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">FAILS</span>
+            <span class="stat-value fail-val" id="stat-fail">0</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">TOTAL</span>
+            <span class="stat-value total-val" id="stat-total">0</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">SCORE</span>
+            <span class="stat-value score-val" id="stat-score">—</span>
+          </div>
+        </div>
+
+        <button class="verdict-btn" id="btn-success" disabled>
+          ✓ SUCCESS
+          <span class="key-hint">→ RIGHT ARROW</span>
+        </button>
+      </div>
+
+      <div class="key-hints">
+        <div class="key-hint-item"><kbd>←</kbd> FAIL</div>
+        <div class="key-hint-item"><kbd>→</kbd> SUCCESS</div>
+      </div>
+
+      <div class="event-row" id="event-row"></div>
+
+      <div class="section-head history-head">
+        <span class="section-title">Session History</span>
+        <div class="history-controls">
+          <div class="history-tabs">
+            <button class="history-tab active" data-filter="all">
+              ALL <span class="history-tab-count" id="count-all">0</span>
+            </button>
+            <button class="history-tab" data-filter="active">
+              ACTIVE <span class="history-tab-count" id="count-active">0</span>
+            </button>
+            <button class="history-tab" data-filter="done">
+              DONE <span class="history-tab-count" id="count-done">0</span>
+            </button>
+            <button class="history-tab" data-filter="stopped">
+              STOPPED
+              <span class="history-tab-count" id="count-stopped">0</span>
+            </button>
+          </div>
+          <div class="history-actions history-actions-top">
+            <input
+              type="text"
+              id="history-search"
+              placeholder="SEARCH TITLE OR MODEL"
+              autocomplete="off"
+              maxlength="80"
+            />
+            <select class="history-select" id="history-ticket-filter">
+              <option value="all">ALL TICKETS</option>
+              <option value="ungrouped">NO TICKET</option>
+            </select>
+            <select class="history-select" id="history-sort">
+              <option value="newest">RECENT FIRST</option>
+              <option value="oldest">OLDEST FIRST</option>
+              <option value="best">HIGHEST QUALITY (CONFIDENCE)</option>
+              <option value="worst">HIGHEST RISK (CONFIDENCE)</option>
+              <option value="fastest">HIGHEST THROUGHPUT</option>
+            </select>
+          </div>
+          <div class="history-actions history-actions-bottom">
+            <div class="selection-group">
+              <button
+                class="history-utility-btn"
+                id="select-mode-btn"
+                type="button"
+              >
+                SELECT
+              </button>
+              <button
+                class="history-utility-btn"
+                id="select-visible-btn"
+                type="button"
+                disabled
+              >
+                ALL VISIBLE
+              </button>
+              <button
+                class="history-utility-btn"
+                id="clear-selection-btn"
+                type="button"
+                disabled
+              >
+                CLEAR
+              </button>
+              <button
+                class="history-utility-btn"
+                id="assign-ticket-btn"
+                type="button"
+                disabled
+              >
+                ADD TO TICKET
+              </button>
+              <button
+                class="history-utility-btn"
+                id="summarize-selected-btn"
+                type="button"
+                disabled
+              >
+                SUMMARIZE
+              </button>
+              <button
+                class="history-utility-btn danger"
+                id="delete-selected-btn"
+                type="button"
+                disabled
+              >
+                DELETE SELECTED
+              </button>
+              <button
+                class="history-utility-btn"
+                id="new-ticket-btn"
+                type="button"
+              >
+                NEW TICKET
+              </button>
+              <button
+                class="history-utility-btn danger"
+                id="delete-ticket-btn"
+                type="button"
+              >
+                DELETE TICKET
+              </button>
+            </div>
+            <div class="export-group">
+              <button class="export-btn" data-export="csv">CSV</button>
+              <button class="export-btn" data-export="json">JSON</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="history-list" id="history-list">
+        <div class="history-empty" id="history-empty">NO SESSIONS YET</div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="rename-modal">
+      <div class="modal">
+        <div class="modal-title">Rename Session</div>
+        <input
+          type="text"
+          id="rename-session-input"
+          placeholder="SESSION TITLE..."
+          maxlength="60"
+          autocomplete="off"
+        />
+        <div class="modal-btns">
+          <button id="rename-modal-cancel">Cancel</button>
+          <button class="primary" id="rename-modal-confirm">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="ticket-modal">
+      <div class="modal">
+        <div class="modal-title" id="ticket-modal-title">Ticket Sessions</div>
+        <select id="ticket-modal-select">
+          <option value="">SELECT A TICKET</option>
+          <option value="ungrouped">NO TICKET</option>
+        </select>
+        <input
+          type="text"
+          id="ticket-modal-input"
+          placeholder="OR CREATE NEW TICKET"
+          maxlength="60"
+          autocomplete="off"
+        />
+        <input
+          type="text"
+          id="ticket-modal-operators"
+          placeholder="OPERATORS (COMMA SEPARATED)"
+          maxlength="200"
+          autocomplete="off"
+        />
+        <div class="modal-btns">
+          <button id="ticket-modal-cancel">Cancel</button>
+          <button class="primary" id="ticket-modal-confirm">Apply</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="selection-summary-modal">
+      <div class="modal modal-wide">
+        <div class="modal-title">Summary</div>
+        <div class="summary-modal-toolbar">
+          <div class="summary-modal-subtitle" id="selection-summary-subtitle">
+            SELECT SESSIONS TO GENERATE A SUMMARY
+          </div>
+          <div class="summary-toolbar-controls">
+            <label
+              class="summary-toolbar-label"
+              for="selection-summary-graph-metric"
+              id="selection-summary-graph-metric-label"
+              style="display: none"
+            >
+              GRAPH
+            </label>
+            <select
+              class="history-select summary-control"
+              id="selection-summary-graph-metric"
+              style="display: none"
+            >
+              <option value="score">SCORE %</option>
+              <option value="rate">THROUGHPUT</option>
+              <option value="total">TOTAL EVALS</option>
+            </select>
+            <div class="summary-view-switch">
+              <button
+                class="history-utility-btn active"
+                id="selection-summary-view-list"
+                type="button"
+              >
+                LIST
+              </button>
+              <button
+                class="history-utility-btn"
+                id="selection-summary-view-chart"
+                type="button"
+              >
+                CHART
+              </button>
+              <button
+                class="history-utility-btn"
+                id="selection-summary-view-models"
+                type="button"
+              >
+                BY MODEL
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="summary-metrics">
+          <div class="summary-metric-card">
+            <div class="summary-metric-label">BEST</div>
+            <div class="summary-metric-value" id="selection-summary-best">
+              —
+            </div>
+            <div class="summary-metric-meta" id="selection-summary-best-meta">
+              —
+            </div>
+          </div>
+          <div class="summary-metric-card">
+            <div class="summary-metric-label">FASTEST</div>
+            <div class="summary-metric-value" id="selection-summary-fastest">
+              —
+            </div>
+            <div
+              class="summary-metric-meta"
+              id="selection-summary-fastest-meta"
+            >
+              —
+            </div>
+          </div>
+        </div>
+        <div
+          class="summary-graph-wrap hidden"
+          id="selection-summary-graph-wrap"
+        >
+          <div class="summary-graph-list" id="selection-summary-graph"></div>
+        </div>
+        <div class="summary-list-wrap" id="selection-summary-list-wrap">
+          <table class="summary-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th class="sortable" data-table="sessions" data-sort="model">
+                  Model<span class="sort-arrow"></span>
+                </th>
+                <th class="sortable" data-table="sessions" data-sort="color">
+                  Color<span class="sort-arrow"></span>
+                </th>
+                <th class="sortable" data-table="sessions" data-sort="success">
+                  Success<span class="sort-arrow"></span>
+                </th>
+                <th class="sortable" data-table="sessions" data-sort="fail">
+                  Fail<span class="sort-arrow"></span>
+                </th>
+                <th class="sortable" data-table="sessions" data-sort="total">
+                  Total<span class="sort-arrow"></span>
+                </th>
+                <th class="sortable" data-table="sessions" data-sort="score">
+                  Score<span class="sort-arrow"></span>
+                </th>
+                <th class="sortable" data-table="sessions" data-sort="rate">
+                  Rate<span class="sort-arrow"></span>
+                </th>
+                <th class="sortable" data-table="sessions" data-sort="events">
+                  Events<span class="sort-arrow"></span>
+                </th>
+                <th>Comment</th>
+              </tr>
+            </thead>
+            <tbody id="selection-summary-body"></tbody>
+          </table>
+        </div>
+        <div
+          class="summary-list-wrap hidden"
+          id="selection-summary-models-wrap"
+        >
+          <table class="summary-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th class="sortable" data-table="models" data-sort="model">
+                  Model<span class="sort-arrow"></span>
+                </th>
+                <th class="sortable" data-table="models" data-sort="red">
+                  Red<span class="sort-arrow"></span>
+                </th>
+                <th class="sortable" data-table="models" data-sort="yellow">
+                  Yellow<span class="sort-arrow"></span>
+                </th>
+                <th class="sortable" data-table="models" data-sort="blue">
+                  Blue<span class="sort-arrow"></span>
+                </th>
+                <th class="sortable" data-table="models" data-sort="overall">
+                  Overall Avg<span class="sort-arrow"></span>
+                </th>
+                <th class="sortable" data-table="models" data-sort="confidence">
+                  Confidence<span class="sort-arrow"></span>
+                </th>
+                <th class="sortable" data-table="models" data-sort="events">
+                  Events<span class="sort-arrow"></span>
+                </th>
+                <th class="sortable" data-table="models" data-sort="sessions">
+                  Sessions<span class="sort-arrow"></span>
+                </th>
+                <th class="sortable" data-table="models" data-sort="evals">
+                  Evals<span class="sort-arrow"></span>
+                </th>
+              </tr>
+            </thead>
+            <tbody id="selection-summary-models-body"></tbody>
+          </table>
+        </div>
+        <div class="summary-copy-note">
+          Click a column header to sort. Copy follows the current view and sort
+          order.
+        </div>
+        <div class="modal-btns">
+          <button id="selection-summary-close">Close</button>
+          <button class="primary" id="selection-summary-copy">Copy</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="delete-ticket-modal">
+      <div class="modal">
+        <div class="modal-title">Delete Ticket</div>
+        <select id="delete-ticket-select"></select>
+        <div class="modal-note" id="delete-ticket-note">
+          Only empty tickets can be deleted.
+        </div>
+        <div class="modal-btns">
+          <button id="delete-ticket-cancel">Cancel</button>
+          <button class="primary" id="delete-ticket-confirm" disabled>
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="confirm-modal-overlay" id="delete-selected-modal">
+      <div class="confirm-modal">
+        <div class="confirm-modal-top">
+          <span class="confirm-modal-icon">⌫</span>
+          <div class="confirm-modal-title">Delete Selected</div>
+          <div class="confirm-modal-body">
+            This will delete all selected sessions. You can undo for a few
+            seconds afterwards.
+            <span class="confirm-modal-session-name" id="delete-selected-count"
+              >—</span
+            >
+          </div>
+        </div>
+        <div class="confirm-modal-btns">
+          <button class="confirm-modal-cancel" id="delete-selected-cancel">
+            Cancel
+          </button>
+          <button class="confirm-modal-confirm" id="delete-selected-confirm">
+            ⌫ Delete
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="confirm-modal-overlay" id="erase-modal">
+      <div class="confirm-modal">
+        <div class="confirm-modal-top">
+          <span class="confirm-modal-icon">⌫</span>
+          <div class="confirm-modal-title">Erase Session</div>
+          <div class="confirm-modal-body">
+            This will permanently delete all entries and cannot be undone.
+            <span
+              class="confirm-modal-session-name"
+              id="erase-modal-session-name"
+              >—</span
+            >
+          </div>
+        </div>
+        <div class="confirm-modal-btns">
+          <button class="confirm-modal-cancel" id="erase-modal-cancel">
+            Cancel
+          </button>
+          <button class="confirm-modal-confirm" id="erase-modal-confirm">
+            ⌫ Erase
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="undo-toast" id="undo-toast">
+      <div class="undo-toast-copy">
+        <div class="undo-toast-title">Change saved</div>
+        <div class="undo-toast-body" id="undo-toast-body">
+          You can undo this for a few seconds.
+        </div>
+      </div>
+      <div class="undo-toast-side">
+        <div class="undo-timer"><div id="undo-timer-fill"></div></div>
+        <button id="undo-toast-btn">Undo</button>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,177 @@
+.evalArea {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 0;
+  margin: 24px 0;
+  align-items: stretch;
+}
+
+.verdict {
+  font-family: var(--sans);
+  font-weight: 900;
+  font-size: 36px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 36px 20px;
+  transition: all 0.1s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  user-select: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.verdict::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.1s;
+  background: rgba(255, 255, 255, 0.08);
+}
+.verdict:active::after {
+  opacity: 1;
+}
+.verdict:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+.keyHint {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  opacity: 0.5;
+}
+
+.success {
+  background: var(--success-dim);
+  border: 2px solid rgba(0, 255, 136, 0.3);
+  color: var(--success);
+}
+.success:not(:disabled):hover {
+  background: rgba(0, 255, 136, 0.2);
+  border-color: var(--success);
+  box-shadow: 0 0 40px rgba(0, 255, 136, 0.2);
+}
+
+.fail {
+  background: var(--fail-dim);
+  border: 2px solid rgba(255, 51, 85, 0.3);
+  color: var(--fail);
+}
+.fail:not(:disabled):hover {
+  background: rgba(255, 51, 85, 0.2);
+  border-color: var(--fail);
+  box-shadow: 0 0 40px rgba(255, 51, 85, 0.2);
+}
+
+.verdict:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+@keyframes flashGreen {
+  0% {
+    background: rgba(0, 255, 136, 0.5);
+  }
+  100% {
+    background: var(--success-dim);
+  }
+}
+@keyframes flashRed {
+  0% {
+    background: rgba(255, 51, 85, 0.5);
+  }
+  100% {
+    background: var(--fail-dim);
+  }
+}
+.flashSuccess {
+  animation: flashGreen 0.25s ease-out;
+}
+.flashFail {
+  animation: flashRed 0.25s ease-out;
+}
+
+.stats {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0;
+  padding: 0 28px;
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  min-width: 160px;
+}
+
+.statRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 16px;
+}
+.statRow:last-child {
+  border-bottom: none;
+}
+
+.statLabel {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--text-dimmer);
+  text-transform: uppercase;
+}
+
+.statValue {
+  font-family: var(--mono);
+  font-size: 22px;
+  font-weight: bold;
+  line-height: 1;
+}
+.successVal {
+  color: var(--success);
+}
+.failVal {
+  color: var(--fail);
+}
+.totalVal {
+  color: var(--accent);
+}
+.scoreVal {
+  color: var(--warn);
+}
+
+.keyHints {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin-top: 8px;
+}
+
+.keyHintItem {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-dimmer);
+  letter-spacing: 0.1em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.keyHintItem kbd {
+  background: var(--surface2);
+  border: 1px solid var(--border-bright);
+  border-radius: 3px;
+  padding: 2px 7px;
+  font-size: 10px;
+  color: var(--text-dim);
+}
