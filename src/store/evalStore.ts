@@ -3,7 +3,10 @@ import { persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 
 import { normalizeLoadedSession } from "./helpers";
-import { createSessionsSlice, type SessionsSlice } from "./slices/sessionsSlice";
+import {
+  createSessionsSlice,
+  type SessionsSlice,
+} from "./slices/sessionsSlice";
 import { createTicketsSlice, type TicketsSlice } from "./slices/ticketsSlice";
 import { createHistorySlice, type HistorySlice } from "./slices/historySlice";
 import { createUiSlice, type UiSlice } from "./slices/uiSlice";
@@ -32,6 +35,7 @@ export const useEvalStore = create<EvalStore>()(
       // Persist data + preferences only; selection / modals / undo are transient.
       partialize: (state) => ({
         currentSessionId: state.currentSessionId,
+        currentTicketId: state.currentTicketId,
         sessions: state.sessions,
         tickets: state.tickets,
         defaultDurationSec: state.defaultDurationSec,
@@ -48,13 +52,22 @@ export const useEvalStore = create<EvalStore>()(
         const sessions = (saved.sessions ?? []).map(normalizeLoadedSession);
         const tickets = saved.tickets ?? [];
         const ticketIds = new Set(tickets.map((ticket) => ticket.id));
+        const migratedCurrentTicketId =
+          saved.currentTicketId ?? saved.historyTicketFilter ?? "all";
+        const currentTicketId =
+          migratedCurrentTicketId &&
+          migratedCurrentTicketId !== "all" &&
+          migratedCurrentTicketId !== "ungrouped" &&
+          !ticketIds.has(migratedCurrentTicketId)
+            ? "all"
+            : migratedCurrentTicketId;
         // Drop ticket references whose ticket no longer exists (legacy sync).
         sessions.forEach((session) => {
           if (session.ticketId && !ticketIds.has(session.ticketId)) {
             session.ticketId = null;
           }
         });
-        return { ...current, ...saved, sessions, tickets };
+        return { ...current, ...saved, sessions, tickets, currentTicketId };
       },
     },
   ),

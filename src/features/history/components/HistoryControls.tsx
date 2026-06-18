@@ -25,15 +25,13 @@ export function HistoryControls() {
   const tickets = useEvalStore((state) => state.tickets);
   const statusFilter = useEvalStore((state) => state.historyStatusFilter);
   const search = useEvalStore((state) => state.historySearch);
-  const ticketFilter = useEvalStore((state) => state.historyTicketFilter);
+  const ticketFilter = useEvalStore((state) => state.currentTicketId ?? "all");
   const sort = useEvalStore((state) => state.historySort);
   const setHistoryStatusFilter = useEvalStore(
     (state) => state.setHistoryStatusFilter,
   );
   const setHistorySearch = useEvalStore((state) => state.setHistorySearch);
-  const setHistoryTicketFilter = useEvalStore(
-    (state) => state.setHistoryTicketFilter,
-  );
+  const setCurrentTicketId = useEvalStore((state) => state.setCurrentTicketId);
   const setHistorySort = useEvalStore((state) => state.setHistorySort);
   const selectMode = useEvalStore((state) => state.selectMode);
   const selectedCount = useEvalStore(
@@ -97,7 +95,7 @@ export function HistoryControls() {
           <select
             className={styles.select}
             value={ticketFilter}
-            onChange={(event) => setHistoryTicketFilter(event.target.value)}
+            onChange={(event) => setCurrentTicketId(event.target.value)}
           >
             <option value="all">ALL TICKETS</option>
             <option value="ungrouped">NO TICKET</option>

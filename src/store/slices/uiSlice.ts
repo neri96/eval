@@ -1,4 +1,5 @@
 import type {
+  HistoryTicketFilter,
   ModalName,
   RemovedSnapshot,
   SummaryGraphMetric,
@@ -12,7 +13,7 @@ import type { SliceCreator } from "../evalStore";
  * `restoreRemoved` re-inserts removed sessions, reaching into the sessions slice.
  */
 export type UiSlice = {
-  currentTicketId: string | null;
+  currentTicketId: HistoryTicketFilter | null;
   summaryView: SummaryView;
   summaryGraphMetric: SummaryGraphMetric;
   activeModal: ModalName;
@@ -20,7 +21,7 @@ export type UiSlice = {
   ticketModalMode: "create" | "assign";
   recentlyRemoved: RemovedSnapshot | null;
 
-  setCurrentTicketId: (ticketId: string | null) => void;
+  setCurrentTicketId: (ticketId: HistoryTicketFilter | null) => void;
   setSummaryView: (view: SummaryView) => void;
   setSummaryGraphMetric: (metric: SummaryGraphMetric) => void;
   openModal: (modal: ModalName, sessionId?: string | null) => void;
@@ -31,7 +32,7 @@ export type UiSlice = {
 };
 
 export const createUiSlice: SliceCreator<UiSlice> = (set, get) => ({
-  currentTicketId: null,
+  currentTicketId: "all",
   summaryView: "list",
   summaryGraphMetric: "score",
   activeModal: null,

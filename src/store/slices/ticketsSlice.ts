@@ -74,5 +74,8 @@ export const createTicketsSlice: SliceCreator<TicketsSlice> = (set) => ({
       if (state.historyTicketFilter === ticketId) {
         state.historyTicketFilter = "all";
       }
+      if (state.currentTicketId === ticketId) {
+        state.currentTicketId = "all";
+      }
     }),
 });

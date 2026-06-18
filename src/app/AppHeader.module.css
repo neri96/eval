@@ -17,6 +17,12 @@
   text-transform: uppercase;
 }
 
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .newTicketBtn {
   margin-left: auto;
 }

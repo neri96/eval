@@ -220,7 +220,7 @@ function matchesSearch(state: EvalStore, session: EvalSession): boolean {
 }
 
 function matchesTicket(state: EvalStore, session: EvalSession): boolean {
-  const filter = state.historyTicketFilter;
+  const filter = state.currentTicketId ?? "all";
   if (filter === "all") return true;
   if (filter === "ungrouped") return !session.ticketId;
   return session.ticketId === filter;
@@ -237,9 +237,18 @@ export function selectFilteredSessions(state: EvalStore): EvalSession[] {
   return sortSessions(filtered, state.historySort);
 }
 
+export function selectTickets(state: EvalStore): Ticket[] {
+  return state.tickets;
+}
+
 export function selectCurrentTicket(state: EvalStore): Ticket | null {
-  return state.currentTicketId
-    ? (state.tickets.find((ticket) => ticket.id === state.currentTicketId) ??
-        null)
-    : null;
+  const currentTicketId = state.currentTicketId;
+  if (
+    !currentTicketId ||
+    currentTicketId === "all" ||
+    currentTicketId === "ungrouped"
+  ) {
+    return null;
+  }
+  return state.tickets.find((ticket) => ticket.id === currentTicketId) ?? null;
 }
