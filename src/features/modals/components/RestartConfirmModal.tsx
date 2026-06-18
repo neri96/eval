@@ -4,10 +4,10 @@ import { selectCurrentSession } from "@/store/selectors";
 import { formatDateLabel } from "@/shared/utils/time";
 import styles from "./Modal.module.css";
 
-export function EraseConfirmModal({ open }: { open: boolean }) {
+export function RestartConfirmModal({ open }: { open: boolean }) {
   const current = useEvalStore(selectCurrentSession);
-  const eraseCurrentSession = useEvalStore(
-    (state) => state.eraseCurrentSession,
+  const restartCurrentSession = useEvalStore(
+    (state) => state.restartCurrentSession,
   );
   const closeModal = useEvalStore((state) => state.closeModal);
 
@@ -17,7 +17,7 @@ export function EraseConfirmModal({ open }: { open: boolean }) {
   const entryCount = current?.entries.length ?? 0;
 
   const confirm = () => {
-    eraseCurrentSession();
+    restartCurrentSession();
     closeModal();
   };
 
@@ -32,13 +32,13 @@ export function EraseConfirmModal({ open }: { open: boolean }) {
         <Dialog.Overlay className={styles.confirmOverlay} />
         <Dialog.Content className={styles.confirm}>
           <div className={styles.confirmTop}>
-            <span className={styles.confirmIcon}>⌫</span>
+            <span className={styles.confirmIcon}>↻</span>
             <Dialog.Title className={styles.confirmTitle}>
-              Erase Session
+              Restart Session
             </Dialog.Title>
             <Dialog.Description className={styles.confirmBody}>
-              This removes the current session. You can undo for a few seconds
-              afterwards.
+              This clears all progress and returns the session to its initial
+              state. This can't be undone.
               <span className={styles.confirmName}>
                 {label}
                 {entryCount ? ` · ${entryCount} entries` : " · no entries"}
@@ -59,7 +59,7 @@ export function EraseConfirmModal({ open }: { open: boolean }) {
               className={`${styles.confirmBtn} ${styles.confirmConfirm}`}
               onClick={confirm}
             >
-              ⌫ Erase
+              ↻ Restart
             </button>
           </div>
         </Dialog.Content>

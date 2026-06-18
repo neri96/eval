@@ -1,6 +1,6 @@
 import { useEvalStore } from "@/store/evalStore";
 import { RenameModal } from "./RenameModal";
-import { EraseConfirmModal } from "./EraseConfirmModal";
+import { RestartConfirmModal } from "./RestartConfirmModal";
 import { DeleteSelectedModal } from "./DeleteSelectedModal";
 import { SelectionSummaryModal } from "./SelectionSummaryModal";
 import { TicketModal } from "./TicketModal";
@@ -16,7 +16,7 @@ export function ModalHost() {
   return (
     <>
       <RenameModal open={activeModal === "renameSession"} />
-      <EraseConfirmModal open={activeModal === "erase"} />
+      <RestartConfirmModal open={activeModal === "restart"} />
       <DeleteSelectedModal open={activeModal === "deleteSelected"} />
       <SelectionSummaryModal open={activeModal === "selectionSummary"} />
       <TicketModal open={activeModal === "ticket"} />

@@ -72,11 +72,11 @@ export type ModalName =
   | "ticket"
   | "deleteTicket"
   | "deleteSelected"
-  | "erase"
+  | "restart"
   | "selectionSummary"
   | null;
 
-/** Undo snapshot for deletion / erase (held transiently, not persisted). */
+/** Undo snapshot for deletion (held transiently, not persisted). */
 export type RemovedItem = {
   session: EvalSession;
   index: number;

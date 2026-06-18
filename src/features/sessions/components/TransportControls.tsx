@@ -19,14 +19,24 @@ export function TransportControls({
   const openModal = useEvalStore((state) => state.openModal);
 
   const hasSession = !!current;
+
   const isActive = current?.status === "active";
+  const isPaused = current?.status === "paused";
+  const isOngoing = isActive || isPaused;
+  const isInitial = current?.status === "initial";
+  const isDone = current?.status === "done";
+  const isStopped = current?.status === "stopped";
+  const canStart = hasSession && !isActive && !isDone && !isStopped;
+  const canPause = hasSession && isActive;
+  const canFinishOrStop = hasSession && isOngoing;
+  const canRestart = hasSession && !isInitial;
 
   return (
     <div className={styles.controls}>
       <button
         type="button"
         className={`${styles.btn} ${isActive ? styles.active : ""}`}
-        disabled={!hasSession || isActive}
+        disabled={!canStart}
         onClick={start}
       >
         ▶ PLAY
@@ -34,7 +44,7 @@ export function TransportControls({
       <button
         type="button"
         className={styles.btn}
-        disabled={!isActive}
+        disabled={!canPause}
         onClick={pause}
       >
         ⏸ PAUSE
@@ -42,7 +52,7 @@ export function TransportControls({
       <button
         type="button"
         className={`${styles.btn} ${styles.successBtn}`}
-        disabled={!hasSession}
+        disabled={!canFinishOrStop}
         onClick={finish}
       >
         ✓ FINISH
@@ -50,7 +60,7 @@ export function TransportControls({
       <button
         type="button"
         className={`${styles.btn} ${styles.dangerBtn}`}
-        disabled={!hasSession}
+        disabled={!canFinishOrStop}
         onClick={stop}
       >
         ■ STOP
@@ -58,10 +68,10 @@ export function TransportControls({
       <button
         type="button"
         className={`${styles.btn} ${styles.dangerBtn}`}
-        disabled={!hasSession}
-        onClick={() => openModal("erase")}
+        disabled={!canRestart}
+        onClick={() => openModal("restart")}
       >
-        ⌫ ERASE
+        ↻ RESTART
       </button>
       <button
         type="button"

@@ -2,10 +2,9 @@ import { useEvalStore } from "@/store/evalStore";
 import styles from "./UndoToast.module.css";
 
 /**
- * Undo toast for deletion / erase. `recentlyRemoved` is armed by
- * `deleteSessions` and `eraseCurrentSession`; the drain bar runs for the undo
- * window via CSS and auto-dismisses on animation end. Re-keyed per snapshot so
- * a new removal restarts the timer.
+ * Undo toast for deletion. `recentlyRemoved` is armed by `deleteSessions`; the
+ * drain bar runs for the undo window via CSS and auto-dismisses on animation
+ * end. Re-keyed per snapshot so a new removal restarts the timer.
  */
 export function UndoToast() {
   const removed = useEvalStore((state) => state.recentlyRemoved);

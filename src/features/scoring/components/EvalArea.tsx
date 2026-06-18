@@ -18,7 +18,6 @@ export function EvalArea() {
   const isActive = current?.status === "active";
   const stats = current ? getSessionStats(current) : EMPTY_STATS;
 
-  // Flash the verdict button when its tally grows — works for clicks and keys.
   const [flash, setFlash] = useState<"success" | "fail" | null>(null);
   const prev = useRef({ successes: 0, fails: 0 });
 

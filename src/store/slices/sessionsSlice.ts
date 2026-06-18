@@ -35,7 +35,7 @@ export type SessionsSlice = {
   pauseCurrentSession: () => void;
   finishCurrentSession: () => void;
   stopCurrentSession: () => void;
-  eraseCurrentSession: () => void;
+  restartCurrentSession: () => void;
   resumeSession: (sessionId: string) => void;
 
   setCurrentTitle: (title: string) => void;
@@ -80,7 +80,7 @@ export const createSessionsSlice: SliceCreator<SessionsSlice> = (set, get) => ({
         id: createId("session"),
         title: "",
         model: state.defaultModel,
-        ticketId: null,
+        ticketId: state.currentTicketId || null,
         comment: "",
         color: null,
         status: "initial",
@@ -101,7 +101,8 @@ export const createSessionsSlice: SliceCreator<SessionsSlice> = (set, get) => ({
       const session = state.sessions.find(
         (item) => item.id === state.currentSessionId,
       );
-      if (!session || session.status === "done") return;
+      if (!session || session.status === "done" || session.status === "stopped")
+        return;
       if (!session.runningSince) session.runningSince = now();
       session.status = "active";
     }),
@@ -138,25 +139,21 @@ export const createSessionsSlice: SliceCreator<SessionsSlice> = (set, get) => ({
       session.endedAt = now();
     }),
 
-  eraseCurrentSession: () => {
-    const { currentSessionId, sessions } = get();
-    if (!currentSessionId) return;
-    const index = sessions.findIndex((s) => s.id === currentSessionId);
-    if (index === -1) return;
-    const banked = cloneSession(sessions[index]);
-    if (banked.runningSince) {
-      banked.accumulatedMs += Date.now() - Date.parse(banked.runningSince);
-      banked.runningSince = null;
-    }
+  // Nullify a session's progress and return it to the pristine "initial"
+  // state, keeping its identity and configuration (title, model, color,
+  // comment, ticket, target duration, sort timestamp).
+  restartCurrentSession: () =>
     set((state) => {
-      state.sessions.splice(index, 1);
-      state.currentSessionId = null;
-      state.recentlyRemoved = {
-        items: [{ session: banked, index, wasCurrent: true }],
-        at: Date.now(),
-      };
-    });
-  },
+      const session = state.sessions.find(
+        (item) => item.id === state.currentSessionId,
+      );
+      if (!session) return;
+      session.status = "initial";
+      session.entries = [];
+      session.accumulatedMs = 0;
+      session.runningSince = null;
+      session.endedAt = null;
+    }),
 
   resumeSession: (sessionId) =>
     set((state) => {
@@ -310,9 +307,7 @@ export const createSessionsSlice: SliceCreator<SessionsSlice> = (set, get) => ({
     });
     if (!removed.length) return;
     set((state) => {
-      state.sessions = state.sessions.filter(
-        (session) => !ids.has(session.id),
-      );
+      state.sessions = state.sessions.filter((session) => !ids.has(session.id));
       state.selectedSessionIds = state.selectedSessionIds.filter(
         (id) => !ids.has(id),
       );
