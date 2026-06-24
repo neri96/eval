@@ -8,6 +8,13 @@
   background: var(--surface);
 }
 
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+
 .logo {
   font-family: var(--sans);
   font-weight: 900;
@@ -15,6 +22,34 @@
   letter-spacing: 0.25em;
   color: var(--accent);
   text-transform: uppercase;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.logo:hover {
+  opacity: 0.8;
+}
+
+.sep {
+  font-family: var(--sans);
+  font-weight: 300;
+  font-size: 18px;
+  color: var(--text-dimmer);
+}
+
+.taskName {
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .nav {
@@ -23,15 +58,35 @@
   gap: 8px;
 }
 
+.navAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--text-dim);
+  cursor: pointer;
+  font: inherit;
+}
+
+.navAction:hover .navActionLabel {
+  color: var(--text);
+}
+
+.navActionLabel {
+  font-family: var(--sans);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .newTicketBtn {
   margin-left: auto;
 }
 
 .utilityBtn {
-  background: none;
-  border: none;
-  font-size: 20px;
-  cursor: pointer;
+  font-size: 18px;
   color: var(--text-dim);
   transition: all 0.15s;
   padding: 4px 8px;
@@ -40,13 +95,14 @@
   align-items: center;
   justify-content: center;
   user-select: none;
+  line-height: 1;
 }
 
-.utilityBtn:hover {
+.navAction:hover .utilityBtn {
   color: var(--accent);
   background: var(--accent-dim);
 }
 
-.utilityBtn:active {
+.navAction:active .utilityBtn {
   transform: scale(0.95);
 }

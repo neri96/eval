@@ -1,8 +1,9 @@
-import { Routes, Route } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import AppHeader from "./AppHeader";
 import { useKeyboardShortcuts } from "./useKeyboardShortcuts";
 
-import { HomePage } from "@/pages/HomePage";
+import { LauncherPage } from "@/pages/LauncherPage";
+import { TaskWorkspace } from "@/pages/TaskWorkspace";
 import { TicketPage } from "@/pages/TicketPage";
 
 import { UndoToast } from "@/features/history/components/UndoToast";
@@ -15,8 +16,10 @@ function App() {
     <>
       <AppHeader />
       <Routes>
-        <Route path="/" element={<HomePage />} />
+        <Route path="/" element={<LauncherPage />} />
+        <Route path="/task/:taskId" element={<TaskWorkspace />} />
         <Route path="/tickets" element={<TicketPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <UndoToast />
       <ModalHost />
