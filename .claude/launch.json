@@ -3,9 +3,27 @@
   "configurations": [
     {
       "name": "dev",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--", "--port", "5199", "--strictPort"],
+      "runtimeExecutable": "/Users/bars/.nvm/versions/node/v22.20.0/bin/node",
+      "runtimeArgs": [
+        "node_modules/vite/bin/vite.js",
+        "--port",
+        "5199",
+        "--strictPort"
+      ],
       "port": 5199,
+      "autoPort": false
+    },
+    {
+      "name": "preview",
+      "runtimeExecutable": "/Users/bars/.nvm/versions/node/v22.20.0/bin/node",
+      "runtimeArgs": [
+        "node_modules/vite/bin/vite.js",
+        "preview",
+        "--port",
+        "4173",
+        "--strictPort"
+      ],
+      "port": 4173,
       "autoPort": false
     }
   ]
