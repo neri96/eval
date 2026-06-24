@@ -3,6 +3,8 @@ import { useEvalStore } from "@/store/evalStore";
 import { selectCurrentSession } from "@/store/selectors";
 import styles from "./SessionMeta.module.css";
 
+export const FOCUS_MODEL_INPUT_EVENT = "generalist:focus-model-input";
+
 type MetaCardProps = {
   label: string;
   display: string;
@@ -10,6 +12,7 @@ type MetaCardProps = {
   disabled?: boolean;
   editValue: string;
   maxLength?: number;
+  focusEventName?: string;
   onCommit: (value: string) => void;
 };
 
@@ -20,6 +23,7 @@ function MetaCard({
   disabled = false,
   editValue,
   maxLength = 60,
+  focusEventName,
   onCommit,
 }: MetaCardProps) {
   const [editing, setEditing] = useState(false);
@@ -29,6 +33,17 @@ function MetaCard({
   useEffect(() => {
     if (editing) inputRef.current?.select();
   }, [editing]);
+
+  useEffect(() => {
+    if (!focusEventName) return;
+    const focusField = () => {
+      if (disabled) return;
+      setDraft(editValue);
+      setEditing(true);
+    };
+    window.addEventListener(focusEventName, focusField);
+    return () => window.removeEventListener(focusEventName, focusField);
+  }, [disabled, editValue, focusEventName]);
 
   const startEditing = () => {
     if (disabled) return;
@@ -115,6 +130,7 @@ export function SessionMeta() {
         display={modelDisplay}
         isPlaceholder={!modelValue}
         editValue={modelValue}
+        focusEventName={FOCUS_MODEL_INPUT_EVENT}
         onCommit={(value) => {
           setDefaultModel(value);
           if (current) setCurrentModel(value);

@@ -28,8 +28,12 @@ export const createTicketsSlice: SliceCreator<TicketsSlice> = (set) => ({
       const cleaned = name.trim();
       if (!cleaned) return;
       const ops = normalizeOperators(operators);
+      // Dedup by name within the active task only — the same name may exist
+      // under a different task.
       const existing = state.tickets.find(
-        (ticket) => ticket.name.toLowerCase() === cleaned.toLowerCase(),
+        (ticket) =>
+          ticket.taskId === state.activeTaskId &&
+          ticket.name.toLowerCase() === cleaned.toLowerCase(),
       );
       if (existing) {
         existing.operators = ops;
@@ -38,6 +42,7 @@ export const createTicketsSlice: SliceCreator<TicketsSlice> = (set) => ({
         ticketId = createId("ticket");
         state.tickets.push({
           id: ticketId,
+          taskId: state.activeTaskId,
           name: cleaned,
           operators: ops,
           createdAt: now(),
@@ -51,9 +56,15 @@ export const createTicketsSlice: SliceCreator<TicketsSlice> = (set) => ({
   assignSessionsToTicket: (sessionIds, ticketId) =>
     set((state) => {
       const target = ticketId || null;
+      const ticket = target
+        ? state.tickets.find((item) => item.id === target)
+        : null;
       const ids = new Set(sessionIds);
       state.sessions.forEach((session) => {
-        if (ids.has(session.id)) session.ticketId = target;
+        if (!ids.has(session.id)) return;
+        // A session may only join a ticket from its own task.
+        if (ticket && ticket.taskId !== session.taskId) return;
+        session.ticketId = target;
       });
     }),
 

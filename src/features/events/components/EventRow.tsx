@@ -11,6 +11,13 @@ const EVENT_CLASS: Record<AnomalyKind, string> = {
   phantom: styles.phantom,
   shaky: styles.shaky,
   random: styles.random,
+  spill: styles.spill,
+  ignored_outside: styles.ignoredOutside,
+  miss: styles.miss,
+  multi_grab: styles.multiGrab,
+  glitch: styles.glitch,
+  good_recovery: styles.goodRecovery,
+  bad_grasp: styles.goodRecovery,
 };
 
 export function EventRow() {

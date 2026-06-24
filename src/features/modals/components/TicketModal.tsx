@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { Dialog } from "radix-ui";
 import { useEvalStore } from "@/store/evalStore";
+import { selectTickets } from "@/store/selectors";
 import styles from "./Modal.module.css";
 
 const parseOperators = (raw: string) =>
@@ -13,7 +15,7 @@ const parseOperators = (raw: string) =>
 // useState initializers (no open-seeding effect needed).
 function TicketModalBody() {
   const mode = useEvalStore((state) => state.ticketModalMode);
-  const tickets = useEvalStore((state) => state.tickets);
+  const tickets = useEvalStore(useShallow(selectTickets));
   const selectedIds = useEvalStore((state) => state.selectedSessionIds);
   const createTicket = useEvalStore((state) => state.createTicket);
   const assignSessionsToTicket = useEvalStore(

@@ -1,6 +1,6 @@
 import { useEvalStore } from "@/store/evalStore";
 import { selectCurrentSession } from "@/store/selectors";
-import { elapsedOf } from "@/store/helpers";
+import { currentRollout, elapsedOf } from "@/store/helpers";
 import { formatClock } from "@/shared/utils/time";
 import { useElapsedTick } from "../hooks/useElapsedTick";
 import { DurationControls } from "./DurationControls";
@@ -14,7 +14,9 @@ export function StopwatchBlock() {
 
   const durationSec = current ? current.durationSec : defaultDurationSec;
   const unlimited = durationSec === 0;
-  const elapsedSec = current ? Math.floor(elapsedOf(current) / 1000) : 0;
+  const elapsedSec = current
+    ? Math.floor(elapsedOf(currentRollout(current)) / 1000)
+    : 0;
   const remaining = unlimited ? 0 : Math.max(0, durationSec - elapsedSec);
 
   const display = unlimited ? formatClock(elapsedSec) : formatClock(remaining);

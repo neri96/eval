@@ -28,12 +28,11 @@ const columnHelper = createColumnHelper<TicketRow>();
 const TicketList = () => {
   "use no memo";
 
-  const { tickets, sessions } = useEvalStore(
-    useShallow((state) => ({
-      tickets: selectTickets(state),
-      sessions: state.sessions,
-    })),
-  );
+  // selectTickets returns a freshly filtered array, so shallow-compare it
+  // element-wise (wrapping it in an object would compare it by reference and
+  // loop). sessions is a stable store reference.
+  const tickets = useEvalStore(useShallow(selectTickets));
+  const sessions = useEvalStore((state) => state.sessions);
 
   const [sorting, setSorting] = useState<SortingState>([
     { id: "createdAt", desc: true },

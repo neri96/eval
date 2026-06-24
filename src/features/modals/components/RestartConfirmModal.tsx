@@ -1,6 +1,7 @@
 import { Dialog } from "radix-ui";
 import { useEvalStore } from "@/store/evalStore";
 import { selectCurrentSession } from "@/store/selectors";
+import { sessionEntries } from "@/store/helpers";
 import { formatDateLabel } from "@/shared/utils/time";
 import styles from "./Modal.module.css";
 
@@ -14,7 +15,7 @@ export function RestartConfirmModal({ open }: { open: boolean }) {
   const label = current
     ? current.title || formatDateLabel(current.startedAt)
     : "—";
-  const entryCount = current?.entries.length ?? 0;
+  const entryCount = current ? sessionEntries(current).length : 0;
 
   const confirm = () => {
     restartCurrentSession();

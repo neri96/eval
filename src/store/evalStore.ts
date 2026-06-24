@@ -2,7 +2,8 @@ import { create, type StateCreator } from "zustand";
 import { persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 
-import { normalizeLoadedSession } from "./helpers";
+import { ensureRollouts, normalizeLoadedSession } from "./helpers";
+import { DEFAULT_TASK_ID, isTaskId } from "@/shared/tasks";
 import {
   createSessionsSlice,
   type SessionsSlice,
@@ -31,9 +32,17 @@ export const useEvalStore = create<EvalStore>()(
     })),
     {
       name: "evals-store",
-      version: 1,
+      version: 3,
+      // A migrate function is required, otherwise zustand discards persisted
+      // state whenever the stored version is older than the one above. The
+      // actual shape upgrades (rollouts wrapping, taskId stamping) run
+      // defensively in `merge` on every load, so here we simply hand the
+      // persisted state through so it survives the version bump.
+      migrate: (persisted) => persisted as EvalStore,
+      // (migrate must exist so version bumps upgrade rather than discard.)
       // Persist data + preferences only; selection / modals / undo are transient.
       partialize: (state) => ({
+        activeTaskId: state.activeTaskId,
         currentSessionId: state.currentSessionId,
         currentTicketId: state.currentTicketId,
         sessions: state.sessions,
@@ -49,8 +58,36 @@ export const useEvalStore = create<EvalStore>()(
       }),
       merge: (persisted, current) => {
         const saved = (persisted ?? {}) as Partial<EvalStore>;
-        const sessions = (saved.sessions ?? []).map(normalizeLoadedSession);
-        const tickets = saved.tickets ?? [];
+        const rawSessions = Array.isArray(saved.sessions) ? saved.sessions : [];
+        const rawTickets = Array.isArray(saved.tickets) ? saved.tickets : [];
+        // v1 → v2: data predating the multi-task model is all cube-in-bowl.
+        // v2 → v3: flat sessions are wrapped into a single rollout.
+        const sessions = rawSessions.flatMap((raw) => {
+          try {
+            const normalized = normalizeLoadedSession(ensureRollouts(raw));
+            normalized.taskId = normalized.taskId ?? DEFAULT_TASK_ID;
+            return [normalized];
+          } catch {
+            // Skip malformed entries from older/corrupted local state.
+            return [];
+          }
+        });
+        const tickets = rawTickets.flatMap((ticket) => {
+          try {
+            if (!ticket || typeof ticket !== "object") return [];
+            const safeTicket = {
+              ...ticket,
+              taskId: ticket.taskId ?? DEFAULT_TASK_ID,
+            };
+            return [safeTicket];
+          } catch {
+            // Skip malformed ticket rows from local state.
+            return [];
+          }
+        });
+        const activeTaskId = isTaskId(saved.activeTaskId)
+          ? saved.activeTaskId
+          : DEFAULT_TASK_ID;
         const ticketIds = new Set(tickets.map((ticket) => ticket.id));
         const migratedCurrentTicketId =
           saved.currentTicketId ?? saved.historyTicketFilter ?? "all";
@@ -67,8 +104,21 @@ export const useEvalStore = create<EvalStore>()(
             session.ticketId = null;
           }
         });
-        return { ...current, ...saved, sessions, tickets, currentTicketId };
+        return {
+          ...current,
+          ...saved,
+          activeTaskId,
+          sessions,
+          tickets,
+          currentTicketId,
+        };
       },
     },
   ),
 );
+
+// Dev-only: expose the store for debugging and manual verification.
+if (import.meta.env.DEV) {
+  (globalThis as { __evalStore?: typeof useEvalStore }).__evalStore =
+    useEvalStore;
+}

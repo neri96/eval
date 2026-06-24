@@ -1,13 +1,13 @@
 import { useEffect } from "react";
 import { useEvalStore } from "@/store/evalStore";
 import { selectCurrentSession } from "@/store/selectors";
-import { EVENT_TYPES } from "@/shared/constants";
+import { getTask } from "@/shared/tasks";
 
 const EDITABLE_TAGS = new Set(["INPUT", "TEXTAREA", "SELECT"]);
 
 /**
  * Global keyboard shortcuts (legacy keydown handler):
- *   → success · ← fail · c/d/p/s/r anomaly events · ⌘/Ctrl+Z undo removal.
+ *   ← success · → fail · c/d/p/s/r anomaly events · ⌘/Ctrl+Z undo removal.
  * Ignored while typing in a form field (so native undo still works there).
  */
 export function useKeyboardShortcuts() {
@@ -21,24 +21,33 @@ export function useKeyboardShortcuts() {
       const isActive = current?.status === "active";
 
       if (!event.metaKey && !event.ctrlKey && !event.altKey && !event.repeat) {
-        const eventType = EVENT_TYPES.find(
-          (type) => type.key === event.key.toLowerCase(),
+        // Hotkeys come from the active task's vocabulary. Terminal events
+        // (lego glitch) are excluded — they're driven by the transport button.
+        const eventDef = getTask(state.activeTaskId).events.find(
+          (def) =>
+            !def.endsRollout &&
+            !def.primary &&
+            def.hotkey === event.key.toLowerCase(),
         );
-        if (eventType) {
+        if (eventDef) {
           if (isActive) {
             event.preventDefault();
-            state.addEvent(eventType.id);
+            state.addEvent(eventDef.id);
           }
           return;
         }
       }
 
-      if (event.key === "ArrowRight" && isActive) {
+      if (event.key === "ArrowLeft" && isActive) {
         event.preventDefault();
         state.addSuccess();
-      } else if (event.key === "ArrowLeft" && isActive) {
+      } else if (event.key === "ArrowRight" && isActive) {
         event.preventDefault();
         state.addFail();
+      } else if (event.key === "ArrowDown" && isActive) {
+        // A successful but dirty grasp — counted as a quality demerit.
+        event.preventDefault();
+        state.addEvent("bad_grasp");
       } else if (
         (event.key === "z" || event.key === "Z") &&
         (event.metaKey || event.ctrlKey) &&

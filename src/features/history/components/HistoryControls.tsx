@@ -1,7 +1,12 @@
 import { useMemo } from "react";
+import { useShallow } from "zustand/react/shallow";
 import type { HistorySort, HistoryStatusFilter } from "@/shared/types";
 import { useEvalStore } from "@/store/evalStore";
-import { historyCounts, selectFilteredSessions } from "@/store/selectors";
+import {
+  historyCounts,
+  selectFilteredSessions,
+  selectTickets,
+} from "@/store/selectors";
 import { exportCsv, exportJson } from "@/features/history/export";
 import styles from "./HistoryControls.module.css";
 
@@ -22,7 +27,7 @@ const SORTS: { id: HistorySort; label: string }[] = [
 
 export function HistoryControls() {
   const sessions = useEvalStore((state) => state.sessions);
-  const tickets = useEvalStore((state) => state.tickets);
+  const tickets = useEvalStore(useShallow(selectTickets));
   const statusFilter = useEvalStore((state) => state.historyStatusFilter);
   const search = useEvalStore((state) => state.historySearch);
   const ticketFilter = useEvalStore((state) => state.currentTicketId ?? "all");

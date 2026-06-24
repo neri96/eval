@@ -1,16 +1,21 @@
 import type {
-  AnomalyKind,
   EvalSession,
+  EventId,
+  LegoConfig,
   RemovedItem,
   SessionColor,
 } from "@/shared/types";
-import { ANOMALY_KINDS, DEFAULT_DURATION_SEC } from "@/shared/constants";
+import { DEFAULT_DURATION_SEC } from "@/shared/constants";
+import { getTask } from "@/shared/tasks";
 import {
   bank,
   cloneSession,
   createId,
+  currentRollout,
   elapsedOf,
   finalizeOutgoing,
+  isEmptySession,
+  makeRollout,
   now,
   sanitizeComment,
   sanitizeDuration,
@@ -38,6 +43,11 @@ export type SessionsSlice = {
   restartCurrentSession: () => void;
   resumeSession: (sessionId: string) => void;
 
+  // Multi-rollout (lego) lifecycle.
+  completeRollout: () => void;
+  glitchCurrentRollout: () => void;
+  setLegoConfig: (config: Partial<LegoConfig>) => void;
+
   setCurrentTitle: (title: string) => void;
   setCurrentModel: (model: string) => void;
   setCurrentColor: (color: SessionColor) => void;
@@ -47,8 +57,9 @@ export type SessionsSlice = {
 
   addSuccess: () => void;
   addFail: () => void;
-  addEvent: (anomaly: AnomalyKind) => void;
+  addEvent: (event: EventId) => void;
   undoLastEntry: () => void;
+  deleteEntry: (sessionId: string, entryId: string) => void;
 
   renameSession: (sessionId: string, title: string) => void;
   setSessionComment: (sessionId: string, comment: string) => void;
@@ -74,10 +85,18 @@ export const createSessionsSlice: SliceCreator<SessionsSlice> = (set, get) => ({
       const prev = state.sessions.find(
         (session) => session.id === state.currentSessionId,
       );
+      // Don't stack duplicate blanks: if the current session is still pristine
+      // (no model chosen, never run, nothing scored) for this same task, reuse
+      // it instead of creating yet another empty session.
+      if (prev && prev.taskId === state.activeTaskId && isEmptySession(prev)) {
+        state.currentSessionId = prev.id;
+        return;
+      }
       if (prev) finalizeOutgoing(prev);
 
       const session: EvalSession = {
         id: createId("session"),
+        taskId: state.activeTaskId,
         title: "",
         model: state.defaultModel,
         ticketId: state.currentTicketId || null,
@@ -87,10 +106,16 @@ export const createSessionsSlice: SliceCreator<SessionsSlice> = (set, get) => ({
         durationSec: state.defaultDurationSec,
         startedAt: now(),
         endedAt: null,
-        accumulatedMs: 0,
-        runningSince: null,
-        entries: [],
+        rollouts: [makeRollout(0)],
       };
+
+      // Multi-rollout tasks (lego) carry per-session run config and measure
+      // pieces rather than a time target, so the clock counts up (no auto-finish).
+      const task = getTask(state.activeTaskId);
+      if (task.kind === "multi-rollout" && task.defaultLego) {
+        session.lego = { ...task.defaultLego };
+        session.durationSec = 0;
+      }
 
       state.sessions.unshift(session);
       state.currentSessionId = session.id;
@@ -103,7 +128,9 @@ export const createSessionsSlice: SliceCreator<SessionsSlice> = (set, get) => ({
       );
       if (!session || session.status === "done" || session.status === "stopped")
         return;
-      if (!session.runningSince) session.runningSince = now();
+      if (!session.model.trim()) return;
+      const rollout = currentRollout(session);
+      if (!rollout.runningSince) rollout.runningSince = now();
       session.status = "active";
     }),
 
@@ -113,7 +140,7 @@ export const createSessionsSlice: SliceCreator<SessionsSlice> = (set, get) => ({
         (item) => item.id === state.currentSessionId,
       );
       if (!session || session.status !== "active") return;
-      bank(session);
+      bank(currentRollout(session));
       session.status = "paused";
     }),
 
@@ -123,7 +150,9 @@ export const createSessionsSlice: SliceCreator<SessionsSlice> = (set, get) => ({
         (item) => item.id === state.currentSessionId,
       );
       if (!session) return;
-      bank(session);
+      const rollout = currentRollout(session);
+      bank(rollout);
+      rollout.endedAt = now();
       session.status = "done";
       session.endedAt = now();
     }),
@@ -134,7 +163,9 @@ export const createSessionsSlice: SliceCreator<SessionsSlice> = (set, get) => ({
         (item) => item.id === state.currentSessionId,
       );
       if (!session) return;
-      bank(session);
+      const rollout = currentRollout(session);
+      bank(rollout);
+      rollout.endedAt = now();
       session.status = "stopped";
       session.endedAt = now();
     }),
@@ -149,10 +180,8 @@ export const createSessionsSlice: SliceCreator<SessionsSlice> = (set, get) => ({
       );
       if (!session) return;
       session.status = "initial";
-      session.entries = [];
-      session.accumulatedMs = 0;
-      session.runningSince = null;
       session.endedAt = null;
+      session.rollouts = [makeRollout(0)];
     }),
 
   resumeSession: (sessionId) =>
@@ -168,6 +197,64 @@ export const createSessionsSlice: SliceCreator<SessionsSlice> = (set, get) => ({
       state.currentSessionId = sessionId;
       session.status = "paused";
       session.endedAt = null;
+    }),
+
+  /* ---- multi-rollout (lego) lifecycle ---- */
+
+  // Mark the current rollout cleanly finished and open the next one. Honors the
+  // session's auto/manual next-rollout preference.
+  completeRollout: () =>
+    set((state) => {
+      const session = state.sessions.find(
+        (item) => item.id === state.currentSessionId,
+      );
+      if (!session || session.status === "done" || session.status === "stopped")
+        return;
+      const rollout = currentRollout(session);
+      bank(rollout);
+      rollout.endedAt = now();
+      rollout.outcome = "clean";
+      const next = makeRollout(session.rollouts.length);
+      session.rollouts.push(next);
+      if (session.lego?.autoNextRollout) {
+        next.runningSince = now();
+        session.status = "active";
+      } else {
+        session.status = "paused";
+      }
+    }),
+
+  // Plate confusion: log the glitch, end the current rollout as glitched, and
+  // arm a fresh rollout for the operator to start.
+  glitchCurrentRollout: () =>
+    set((state) => {
+      const session = state.sessions.find(
+        (item) => item.id === state.currentSessionId,
+      );
+      if (!session || session.status === "done" || session.status === "stopped")
+        return;
+      const rollout = currentRollout(session);
+      rollout.entries.push({
+        id: createId("entry"),
+        kind: "anomaly",
+        anomaly: "glitch",
+        at: now(),
+        elapsedMs: elapsedOf(rollout),
+      });
+      bank(rollout);
+      rollout.endedAt = now();
+      rollout.outcome = "glitched";
+      session.rollouts.push(makeRollout(session.rollouts.length));
+      session.status = "paused";
+    }),
+
+  setLegoConfig: (config) =>
+    set((state) => {
+      const session = state.sessions.find(
+        (item) => item.id === state.currentSessionId,
+      );
+      if (!session || !session.lego) return;
+      Object.assign(session.lego, config);
     }),
 
   /* ---- metadata ---- */
@@ -229,12 +316,13 @@ export const createSessionsSlice: SliceCreator<SessionsSlice> = (set, get) => ({
         (item) => item.id === state.currentSessionId,
       );
       if (!session || session.status !== "active") return;
-      session.entries.push({
+      const rollout = currentRollout(session);
+      rollout.entries.push({
         id: createId("entry"),
         kind: "verdict",
         verdict: "success",
         at: now(),
-        elapsedMs: elapsedOf(session),
+        elapsedMs: elapsedOf(rollout),
       });
     }),
 
@@ -244,28 +332,43 @@ export const createSessionsSlice: SliceCreator<SessionsSlice> = (set, get) => ({
         (item) => item.id === state.currentSessionId,
       );
       if (!session || session.status !== "active") return;
-      session.entries.push({
+      const rollout = currentRollout(session);
+      rollout.entries.push({
         id: createId("entry"),
         kind: "verdict",
         verdict: "fail",
         at: now(),
-        elapsedMs: elapsedOf(session),
+        elapsedMs: elapsedOf(rollout),
       });
     }),
 
-  addEvent: (anomaly) =>
+  addEvent: (event) =>
     set((state) => {
-      if (!ANOMALY_KINDS.includes(anomaly)) return;
       const session = state.sessions.find(
         (item) => item.id === state.currentSessionId,
       );
       if (!session || session.status !== "active") return;
-      session.entries.push({
+      // Only events in the session's task vocabulary are accepted.
+      if (!getTask(session.taskId).events.some((def) => def.id === event)) {
+        return;
+      }
+      const rollout = currentRollout(session);
+      // A bad grasp still means a successful placement happened.
+      if (event === "bad_grasp") {
+        rollout.entries.push({
+          id: createId("entry"),
+          kind: "verdict",
+          verdict: "success",
+          at: now(),
+          elapsedMs: elapsedOf(rollout),
+        });
+      }
+      rollout.entries.push({
         id: createId("entry"),
         kind: "anomaly",
-        anomaly,
+        anomaly: event,
         at: now(),
-        elapsedMs: elapsedOf(session),
+        elapsedMs: elapsedOf(rollout),
       });
     }),
 
@@ -274,8 +377,27 @@ export const createSessionsSlice: SliceCreator<SessionsSlice> = (set, get) => ({
       const session = state.sessions.find(
         (item) => item.id === state.currentSessionId,
       );
-      if (!session || !session.entries.length) return;
-      session.entries.pop();
+      if (!session) return;
+      const rollout = currentRollout(session);
+      if (!rollout.entries.length) return;
+      rollout.entries.pop();
+    }),
+
+  // Remove a single entry from whichever rollout of any session holds it.
+  // Works live (current rollout) and historically (finished sessions).
+  deleteEntry: (sessionId, entryId) =>
+    set((state) => {
+      const session = state.sessions.find((item) => item.id === sessionId);
+      if (!session) return;
+      for (const rollout of session.rollouts) {
+        const index = rollout.entries.findIndex(
+          (entry) => entry.id === entryId,
+        );
+        if (index !== -1) {
+          rollout.entries.splice(index, 1);
+          return;
+        }
+      }
     }),
 
   /* ---- list management ---- */

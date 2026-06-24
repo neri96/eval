@@ -26,7 +26,8 @@ export function TransportControls({
   const isInitial = current?.status === "initial";
   const isDone = current?.status === "done";
   const isStopped = current?.status === "stopped";
-  const canStart = hasSession && !isActive && !isDone && !isStopped;
+  const hasModel = !!current?.model.trim();
+  const canStart = hasSession && hasModel && !isActive && !isDone && !isStopped;
   const canPause = hasSession && isActive;
   const canFinishOrStop = hasSession && isOngoing;
   const canRestart = hasSession && !isInitial;
@@ -38,8 +39,9 @@ export function TransportControls({
         className={`${styles.btn} ${isActive ? styles.active : ""}`}
         disabled={!canStart}
         onClick={start}
+        title={hasSession && !hasModel ? "Set a model before starting" : undefined}
       >
-        ▶ PLAY
+        {hasSession && !hasModel ? "SET MODEL TO PLAY" : "▶ PLAY"}
       </button>
       <button
         type="button"

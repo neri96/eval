@@ -1,10 +1,10 @@
-import type {
-  AnomalyKind,
-  EvalSession,
-  HistorySort,
-  Ticket,
-} from "@/shared/types";
-import { elapsedOf } from "./helpers";
+import type { EvalSession, HistorySort, Ticket } from "@/shared/types";
+import {
+  currentRollout,
+  elapsedOf,
+  sessionElapsedMs,
+  sessionEntries,
+} from "./helpers";
 import type { EvalStore } from "./evalStore";
 
 /* ------------------------------------------------------------------ *
@@ -19,7 +19,7 @@ export const selectCurrentSession = (state: EvalStore): EvalSession | null =>
 
 export const selectCurrentElapsedMs = (state: EvalStore): number => {
   const session = selectCurrentSession(state);
-  return session ? elapsedOf(session) : 0;
+  return session ? elapsedOf(currentRollout(session)) : 0;
 };
 
 /** True when the running session has reached its (non-unlimited) target — UI tick should Finish. */
@@ -29,7 +29,7 @@ export const selectShouldAutoFinish = (state: EvalStore): boolean => {
     !!session &&
     session.status === "active" &&
     session.durationSec > 0 &&
-    elapsedOf(session) >= session.durationSec * 1000
+    elapsedOf(currentRollout(session)) >= session.durationSec * 1000
   );
 };
 
@@ -38,25 +38,21 @@ export type SessionStats = {
   fails: number;
   total: number;
   score: number | null;
-  events: Record<AnomalyKind, number>;
+  events: Record<string, number>;
 };
 
 export function getSessionStats(session: EvalSession): SessionStats {
-  const events: Record<AnomalyKind, number> = {
-    collision: 0,
-    dropped: 0,
-    phantom: 0,
-    shaky: 0,
-    random: 0,
-  };
+  // Event counts are keyed by event id and built from whatever the entries
+  // contain, so each task's vocabulary is tallied without hardcoding it here.
+  const events: Record<string, number> = {};
   let successes = 0;
   let fails = 0;
-  for (const entry of session.entries) {
+  for (const entry of sessionEntries(session)) {
     if (entry.kind === "verdict") {
       if (entry.verdict === "success") successes += 1;
       else fails += 1;
     } else {
-      events[entry.anomaly] += 1;
+      events[entry.anomaly] = (events[entry.anomaly] ?? 0) + 1;
     }
   }
   const total = successes + fails;
@@ -99,7 +95,7 @@ export type SessionMetrics = SessionStats & {
 
 export function getSessionMetrics(session: EvalSession): SessionMetrics {
   const stats = getSessionStats(session);
-  const elapsedMs = elapsedOf(session);
+  const elapsedMs = sessionElapsedMs(session);
   const minutes = elapsedMs / 60000;
   const ratePerMinute = minutes > 0 ? stats.total / minutes : 0;
   const successRate = stats.total > 0 ? stats.successes / stats.total : null;
@@ -229,6 +225,7 @@ function matchesTicket(state: EvalStore, session: EvalSession): boolean {
 export function selectFilteredSessions(state: EvalStore): EvalSession[] {
   const filtered = state.sessions.filter(
     (session) =>
+      session.taskId === state.activeTaskId &&
       (state.historyStatusFilter === "all" ||
         sessionStatusGroup(session) === state.historyStatusFilter) &&
       matchesSearch(state, session) &&
@@ -238,7 +235,7 @@ export function selectFilteredSessions(state: EvalStore): EvalSession[] {
 }
 
 export function selectTickets(state: EvalStore): Ticket[] {
-  return state.tickets;
+  return state.tickets.filter((ticket) => ticket.taskId === state.activeTaskId);
 }
 
 export function selectCurrentTicket(state: EvalStore): Ticket | null {

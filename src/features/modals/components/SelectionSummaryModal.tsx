@@ -1,24 +1,32 @@
 import { useState } from "react";
 import { Dialog } from "radix-ui";
-import type { SummaryGraphMetric, SummaryView } from "@/shared/types";
+import type { SummaryGraphMetric, SummaryView, TaskId } from "@/shared/types";
 import { SESSION_COLORS } from "@/shared/constants";
+import { getTask } from "@/shared/tasks";
 import { useEvalStore } from "@/store/evalStore";
 import { selectFilteredSessions } from "@/store/selectors";
 import {
-  buildModelClipboard,
+  buildModelReportClipboard,
   buildModelRows,
-  buildSessionClipboard,
   buildSummaryRows,
   pickBest,
   pickFastest,
+  type ReportFormat,
   type SummaryRow,
 } from "@/features/history/summary";
+import { EventHoverPopover } from "./EventHoverPopover";
 import styles from "./SelectionSummaryModal.module.css";
 
 const VIEWS: { id: SummaryView; label: string }[] = [
   { id: "list", label: "LIST" },
   { id: "chart", label: "CHART" },
   { id: "models", label: "BY MODEL" },
+];
+
+const COPY_OPTIONS: { id: ReportFormat; label: string }[] = [
+  { id: "brief", label: "Brief" },
+  { id: "detailed", label: "Detailed" },
+  { id: "slack", label: "For Slack" },
 ];
 
 function scoreClass(score: number | null) {
@@ -29,6 +37,46 @@ function scoreClass(score: number | null) {
 }
 
 const cap = (value: string) => value[0].toUpperCase() + value.slice(1);
+
+function eventSwatchClass(id: string): string {
+  if (id === "collision") return styles.evCollision;
+  if (id === "dropped") return styles.evDropped;
+  if (id === "phantom") return styles.evPhantom;
+  if (id === "shaky") return styles.evShaky;
+  if (id === "random") return styles.evRandom;
+  if (id === "bad_grasp") return styles.evBadGrasp;
+  return styles.evDefault;
+}
+
+function eventRows(taskId: TaskId, events: Record<string, number>) {
+  const labels = Object.fromEntries(
+    getTask(taskId).events.map((event) => [event.id, event.label]),
+  ) as Record<string, string>;
+  return Object.entries(events)
+    .filter(([, count]) => count > 0)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([id, count]) => ({ id, label: labels[id] ?? id, count }));
+}
+
+function EventHover({
+  taskId,
+  events,
+}: {
+  taskId: TaskId;
+  events: Record<string, number>;
+}) {
+  const rows = eventRows(taskId, events);
+  const total = rows.reduce((sum, event) => sum + event.count, 0);
+  return (
+    <EventHoverPopover
+      total={total}
+      rows={rows.map((event) => ({
+        ...event,
+        dotClassName: eventSwatchClass(event.id),
+      }))}
+    />
+  );
+}
 
 function graphValue(row: SummaryRow, metric: SummaryGraphMetric): number {
   if (metric === "rate") return row.metrics.ratePerMinute;
@@ -51,7 +99,9 @@ export function SelectionSummaryModal({ open }: { open: boolean }) {
   );
   const sessions = useEvalStore((state) => state.sessions);
   const selectedIds = useEvalStore((state) => state.selectedSessionIds);
+  const activeTaskId = useEvalStore((state) => state.activeTaskId);
   const [copyLabel, setCopyLabel] = useState("Copy");
+  const [copyOpen, setCopyOpen] = useState(false);
 
   const targets = selectedIds.length
     ? sessions.filter((session) => selectedIds.includes(session.id))
@@ -65,11 +115,7 @@ export function SelectionSummaryModal({ open }: { open: boolean }) {
     : `ALL VISIBLE (${rows.length})`;
   const maxGraph = Math.max(1, ...rows.map((row) => graphValue(row, graphMetric)));
 
-  const copy = async () => {
-    const text =
-      view === "models"
-        ? buildModelClipboard(modelRows)
-        : buildSessionClipboard(rows);
+  const writeClipboard = async (text: string) => {
     if (!text) return;
     let ok = false;
     try {
@@ -94,6 +140,11 @@ export function SelectionSummaryModal({ open }: { open: boolean }) {
     }
     setCopyLabel(ok ? "Copied" : "Failed");
     setTimeout(() => setCopyLabel("Copy"), 1400);
+  };
+
+  const copyReport = async (format: ReportFormat) => {
+    await writeClipboard(buildModelReportClipboard(modelRows, format));
+    setCopyOpen(false);
   };
 
   return (
@@ -212,6 +263,7 @@ export function SelectionSummaryModal({ open }: { open: boolean }) {
                     <th>Confidence</th>
                     <th>Sessions</th>
                     <th>Evals</th>
+                    <th>Events</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -241,9 +293,17 @@ export function SelectionSummaryModal({ open }: { open: boolean }) {
                         <td className={scoreClass(overall)}>
                           {overall === null ? "—" : `${overall}%`}
                         </td>
-                        <td>{row.overallConfidence.toFixed(1)}%</td>
-                        <td>{row.sessions}</td>
-                        <td>{row.totalEvals}</td>
+                        <td className={styles.numWarn}>
+                          {row.overallConfidence.toFixed(1)}%
+                        </td>
+                        <td className={styles.numAccent}>{row.sessions}</td>
+                        <td className={styles.numStrong}>{row.totalEvals}</td>
+                        <td>
+                          <EventHover
+                            taskId={activeTaskId}
+                            events={row.events}
+                          />
+                        </td>
                       </tr>
                     );
                   })}
@@ -263,6 +323,7 @@ export function SelectionSummaryModal({ open }: { open: boolean }) {
                     <th>Total</th>
                     <th>Score</th>
                     <th>Rate</th>
+                    <th>Events</th>
                     <th>Comment</th>
                   </tr>
                 </thead>
@@ -280,15 +341,25 @@ export function SelectionSummaryModal({ open }: { open: boolean }) {
                           ? row.session.color.toUpperCase()
                           : "—"}
                       </td>
-                      <td>{row.metrics.successes}</td>
-                      <td>{row.metrics.fails}</td>
-                      <td>{row.metrics.total}</td>
+                      <td className={styles.numSuccess}>
+                        {row.metrics.successes}
+                      </td>
+                      <td className={styles.numFail}>{row.metrics.fails}</td>
+                      <td className={styles.numStrong}>{row.metrics.total}</td>
                       <td className={scoreClass(row.metrics.score)}>
                         {row.metrics.score === null
                           ? "—"
                           : `${row.metrics.score}%`}
                       </td>
-                      <td>{row.metrics.ratePerMinute.toFixed(2)}/m</td>
+                      <td className={styles.numAccent}>
+                        {row.metrics.ratePerMinute.toFixed(2)}/m
+                      </td>
+                      <td>
+                        <EventHover
+                          taskId={activeTaskId}
+                          events={row.metrics.events}
+                        />
+                      </td>
                       <td className={styles.commentCell}>
                         {row.session.comment || "—"}
                       </td>
@@ -301,7 +372,7 @@ export function SelectionSummaryModal({ open }: { open: boolean }) {
 
           <div className={styles.footer}>
             <span className={styles.copyNote}>
-              Copy follows the current view.
+              Copy model reports as brief, detailed, or Slack-ready text.
             </span>
             <div className={styles.btns}>
               <Dialog.Close asChild>
@@ -309,13 +380,36 @@ export function SelectionSummaryModal({ open }: { open: boolean }) {
                   Close
                 </button>
               </Dialog.Close>
-              <button
-                type="button"
-                className={`${styles.btn} ${styles.primary}`}
-                onClick={copy}
-              >
-                {copyLabel}
-              </button>
+              <div className={styles.copyMenu}>
+                <button
+                  type="button"
+                  className={`${styles.btn} ${styles.primary}`}
+                  aria-expanded={copyOpen}
+                  onClick={() => setCopyOpen((next) => !next)}
+                >
+                  <span>{copyLabel}</span>
+                  <span
+                    className={`${styles.copyChevron} ${
+                      copyOpen ? styles.copyChevronOpen : ""
+                    }`}
+                    aria-hidden="true"
+                  />
+                </button>
+                {copyOpen && (
+                  <div className={styles.copyOptions}>
+                    {COPY_OPTIONS.map((option) => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        className={styles.copyOption}
+                        onClick={() => void copyReport(option.id)}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </Dialog.Content>

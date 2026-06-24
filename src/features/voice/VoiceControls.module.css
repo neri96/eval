@@ -1,0 +1,128 @@
+.bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  margin-bottom: 16px;
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  min-height: 36px;
+  min-width: 154px;
+  justify-content: center;
+  padding: 8px 15px;
+  border-radius: 4px;
+  border: 1px solid var(--border-bright);
+  background: var(--surface2);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--text-dimmer);
+  transition: all 0.15s;
+}
+
+.toggle.on {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+.toggle.on .dot {
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent);
+  animation: blink 1.1s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.ptt {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  min-height: 36px;
+  min-width: 194px;
+  justify-content: center;
+  padding: 8px 15px;
+  border-radius: 4px;
+  border: 1px solid var(--border-bright);
+  background: var(--surface2);
+  color: var(--text-dim);
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.12s;
+}
+.ptt:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.ptt.held {
+  border-color: var(--success);
+  color: var(--success);
+  background: var(--success-dim);
+  box-shadow: 0 0 24px rgba(0, 255, 136, 0.25);
+}
+
+.ptt kbd {
+  font-family: var(--mono);
+  font-size: 9px;
+  background: var(--bg);
+  border: 1px solid var(--border-bright);
+  border-radius: 3px;
+  padding: 1px 6px;
+  color: var(--text-dimmer);
+}
+
+.status {
+  flex: 1;
+  min-width: 120px;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+.listening {
+  color: var(--text-dim);
+  font-style: italic;
+}
+.ok {
+  color: var(--success);
+}
+.bad {
+  color: var(--warn);
+}
+
+.unsupported {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--text-dimmer);
+}

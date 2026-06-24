@@ -157,6 +157,11 @@
   border-radius: 999px;
   text-transform: uppercase;
 }
+
+.hoverableTag {
+  cursor: help;
+  border-bottom: 1px dotted currentColor;
+}
 .colorTag.red {
   color: var(--fail);
   background: var(--fail-dim);
@@ -185,9 +190,13 @@
   padding: 2px 8px;
   border-radius: 999px;
   border: 1px solid var(--border-bright);
+  border-bottom-style: dotted;
   white-space: nowrap;
   display: inline-block;
   text-transform: uppercase;
+  cursor: help;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
 }
 .eventDot.collision {
   color: var(--ev-collision);
@@ -329,6 +338,63 @@
   padding: 4px 8px;
 }
 
+/* Row 2: good/bad events, colored by valence. */
+.eventSummary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.eventChip {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  border-radius: 999px;
+  padding: 4px 9px;
+  text-transform: uppercase;
+}
+.eventGood {
+  color: var(--success);
+  background: var(--success-dim);
+  border: 1px solid rgba(0, 255, 136, 0.35);
+}
+.eventBad {
+  color: var(--ev-collision);
+  background: rgba(255, 106, 61, 0.1);
+  border: 1px solid rgba(255, 106, 61, 0.35);
+}
+
+/* Collapsible entry list (collapsed by default). */
+.entryListWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.entryToggle {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  background: var(--surface2);
+  border: 1px solid var(--border-bright);
+  border-radius: 4px;
+  padding: 6px 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.entryToggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.entryToggleIcon {
+  font-size: 9px;
+}
+
 .commentWrap {
   display: flex;
   flex-direction: column;
@@ -345,6 +411,66 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--text-dimmer);
+}
+
+.commentTopRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.commentVoiceControls {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.voiceLangSelect {
+  min-width: 58px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  background: var(--surface);
+  border: 1px solid var(--border-bright);
+  border-radius: 999px;
+  color: var(--text-dim);
+  padding: 4px 9px;
+  outline: none;
+}
+.voiceLangSelect:focus,
+.voiceLangSelect:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.micBtn {
+  border: 1px solid var(--border-bright);
+  background: var(--surface2);
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 5px 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.micBtn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.micBtnOn {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+.micBtn:disabled,
+.voiceLangSelect:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 .commentInput {
   width: 100%;
@@ -374,9 +500,17 @@
   text-align: right;
 }
 
+.dictationStatus {
+  min-height: 16px;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text-dimmer);
+  letter-spacing: 0.02em;
+}
+
 .entryRow {
   display: grid;
-  grid-template-columns: 56px 72px 1fr;
+  grid-template-columns: 56px 72px 1fr auto;
   align-items: center;
   gap: 10px;
   padding: 7px 9px;
@@ -385,6 +519,26 @@
   font-family: var(--mono);
   font-size: 11px;
   letter-spacing: 0.03em;
+}
+
+.entryDel {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-dimmer);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.entryDel:hover {
+  background: var(--fail-dim);
+  color: var(--fail);
 }
 .entryRow.s {
   border-left: 2px solid var(--success);

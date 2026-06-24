@@ -80,17 +80,27 @@
 @keyframes flashGreen {
   0% {
     background: rgba(0, 255, 136, 0.5);
+    transform: scale(0.97);
+  }
+  65% {
+    transform: scale(1.015);
   }
   100% {
     background: var(--success-dim);
+    transform: scale(1);
   }
 }
 @keyframes flashRed {
   0% {
     background: rgba(255, 51, 85, 0.5);
+    transform: scale(0.97);
+  }
+  65% {
+    transform: scale(1.015);
   }
   100% {
     background: var(--fail-dim);
+    transform: scale(1);
   }
 }
 .flashSuccess {
@@ -167,11 +177,61 @@
   gap: 6px;
 }
 
-.keyHintItem kbd {
+.keyHintItem kbd,
+.badGraspBtn kbd {
   background: var(--surface2);
   border: 1px solid var(--border-bright);
   border-radius: 3px;
   padding: 2px 7px;
   font-size: 10px;
   color: var(--text-dim);
+}
+
+.badGraspBtn {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-dimmer);
+  letter-spacing: 0.1em;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    transform 0.12s ease;
+}
+
+.badGraspBtn:not(:disabled):hover,
+.badGraspBtn.flashBadGrasp {
+  color: var(--warn);
+}
+
+.badGraspBtn:not(:disabled):active {
+  transform: scale(0.94);
+}
+
+.badGraspBtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+@keyframes flashBadGrasp {
+  0% {
+    color: var(--warn);
+    transform: scale(0.94);
+  }
+  65% {
+    transform: scale(1.08);
+  }
+  100% {
+    color: var(--text-dimmer);
+    transform: scale(1);
+  }
+}
+
+.flashBadGrasp {
+  animation: flashBadGrasp 0.24s ease-out;
 }

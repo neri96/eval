@@ -4,8 +4,10 @@ import type {
   RemovedSnapshot,
   SummaryGraphMetric,
   SummaryView,
+  TaskId,
 } from "@/shared/types";
-import { cloneSession } from "../helpers";
+import { DEFAULT_TASK_ID } from "@/shared/tasks";
+import { cloneSession, finalizeOutgoing } from "../helpers";
 import type { SliceCreator } from "../evalStore";
 
 /**
@@ -13,6 +15,7 @@ import type { SliceCreator } from "../evalStore";
  * `restoreRemoved` re-inserts removed sessions, reaching into the sessions slice.
  */
 export type UiSlice = {
+  activeTaskId: TaskId;
   currentTicketId: HistoryTicketFilter | null;
   summaryView: SummaryView;
   summaryGraphMetric: SummaryGraphMetric;
@@ -21,6 +24,7 @@ export type UiSlice = {
   ticketModalMode: "create" | "assign";
   recentlyRemoved: RemovedSnapshot | null;
 
+  setActiveTask: (taskId: TaskId) => void;
   setCurrentTicketId: (ticketId: HistoryTicketFilter | null) => void;
   setSummaryView: (view: SummaryView) => void;
   setSummaryGraphMetric: (metric: SummaryGraphMetric) => void;
@@ -32,6 +36,7 @@ export type UiSlice = {
 };
 
 export const createUiSlice: SliceCreator<UiSlice> = (set, get) => ({
+  activeTaskId: DEFAULT_TASK_ID,
   currentTicketId: "all",
   summaryView: "list",
   summaryGraphMetric: "score",
@@ -39,6 +44,24 @@ export const createUiSlice: SliceCreator<UiSlice> = (set, get) => ({
   modalSessionId: null,
   ticketModalMode: "create",
   recentlyRemoved: null,
+
+  // Switching the active task re-scopes the whole app to that task. Any
+  // in-progress session belongs to the previous task, so finalize it and
+  // clear the per-task view state (current session, ticket filter, selection).
+  setActiveTask: (taskId) =>
+    set((state) => {
+      if (state.activeTaskId === taskId) return;
+      const current = state.sessions.find(
+        (item) => item.id === state.currentSessionId,
+      );
+      if (current) finalizeOutgoing(current);
+      state.activeTaskId = taskId;
+      state.currentSessionId = null;
+      state.currentTicketId = "all";
+      state.historyTicketFilter = "all";
+      state.selectedSessionIds = [];
+      state.selectMode = false;
+    }),
 
   setCurrentTicketId: (ticketId) =>
     set((state) => {
