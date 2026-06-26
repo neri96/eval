@@ -1,25 +1,25 @@
 import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { StopwatchBlock } from "@/features/sessions/components/StopwatchBlock";
-import { SessionControls } from "@/features/sessions/components/SessionControls";
-import { EvalArea } from "@/features/scoring/components/EvalArea";
-import { EventRow } from "@/features/events/components/EventRow";
-import { VoiceControls } from "@/features/voice/VoiceControls";
-import { LiveEntryFeed } from "@/features/scoring/components/LiveEntryFeed";
-import { HistoryPanel } from "@/features/history/components/HistoryPanel";
+import { CubeWorkspace } from "@/features/cube/CubeWorkspace";
 import { LegoWorkspace } from "@/features/lego/components/LegoWorkspace";
 
 import { useEvalStore } from "@/store/evalStore";
 import { getTask, isTaskId } from "@/shared/tasks";
+import type { TaskId } from "@/shared/types";
 
 import styles from "@/app/App.module.css";
 
-/**
- * The scoring workspace for a single task. The route param is the source of
- * truth for which task is active; deep links and refreshes re-sync the store.
- * Unknown or not-yet-available tasks bounce back to the launcher.
- */
+/** Each task picks its own workspace component, even if it shares a `kind`. */
+function renderWorkspace(taskId: TaskId) {
+  switch (taskId) {
+    case "lego-transfer":
+      return <LegoWorkspace />;
+    case "cube-in-bowl":
+      return <CubeWorkspace />;
+  }
+}
+
 export function TaskWorkspace() {
   const { taskId } = useParams();
   const navigate = useNavigate();
@@ -35,26 +35,7 @@ export function TaskWorkspace() {
     }
   }, [taskId, navigate, setActiveTask]);
 
-  if (!valid) return null;
+  if (!valid || !taskId) return null;
 
-  const multiRollout =
-    isTaskId(taskId) && getTask(taskId).kind === "multi-rollout";
-
-  return (
-    <main className={styles.main}>
-      {multiRollout ? (
-        <LegoWorkspace />
-      ) : (
-        <>
-          <StopwatchBlock />
-          <SessionControls />
-          <EvalArea />
-          <EventRow />
-          <VoiceControls />
-          <LiveEntryFeed />
-          <HistoryPanel />
-        </>
-      )}
-    </main>
-  );
+  return <main className={styles.main}>{renderWorkspace(taskId)}</main>;
 }

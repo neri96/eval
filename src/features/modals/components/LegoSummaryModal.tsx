@@ -136,7 +136,7 @@ function chartValueClass(metric: LegoChartMetric): string {
 
 export function LegoSummaryModal({ open }: { open: boolean }) {
   const closeModal = useEvalStore((state) => state.closeModal);
-  const view = useEvalStore((state) => state.summaryView);
+  const rawView = useEvalStore((state) => state.summaryView);
   const setSummaryView = useEvalStore((state) => state.setSummaryView);
   const sessions = useEvalStore((state) => state.sessions);
   const tickets = useEvalStore(useShallow(selectTickets));
@@ -146,6 +146,7 @@ export function LegoSummaryModal({ open }: { open: boolean }) {
     useState<LegoSummarySortDirection>("best");
   const [copyLabel, setCopyLabel] = useState("Copy");
   const [copyOpen, setCopyOpen] = useState(false);
+  const view = VIEWS.some((entry) => entry.id === rawView) ? rawView : "list";
 
   const targets = selectedIds.length
     ? sessions.filter((session) => selectedIds.includes(session.id))

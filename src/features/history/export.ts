@@ -1,5 +1,9 @@
 import type { EvalSession, SessionEntry, Ticket } from "@/shared/types";
-import { getSessionMetrics, sessionStatusGroup } from "@/store/selectors";
+import {
+  getAttempts,
+  getSessionMetrics,
+  sessionStatusGroup,
+} from "@/store/selectors";
 import { getLegoMetrics } from "@/features/history/summary";
 import { sessionEntries } from "@/store/helpers";
 import { getTask } from "@/shared/tasks";
@@ -104,6 +108,9 @@ export function buildExportRows(
       ),
       entries: entries.map(entryToken).join(" | "),
       entries_json: JSON.stringify(entries),
+      // Per-attempt records: the grid placement each verdict happened at, with
+      // its events grouped in (see getAttempts).
+      attempts_json: JSON.stringify(getAttempts(session)),
     };
   });
 }

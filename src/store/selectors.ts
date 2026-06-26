@@ -1,4 +1,11 @@
-import type { EvalSession, HistorySort, Ticket } from "@/shared/types";
+import type {
+  AttemptRecord,
+  EvalSession,
+  EventId,
+  HistorySort,
+  Ticket,
+  Verdict,
+} from "@/shared/types";
 import {
   currentRollout,
   elapsedOf,
@@ -58,6 +65,65 @@ export function getSessionStats(session: EvalSession): SessionStats {
   const total = successes + fails;
   const score = total > 0 ? Math.round((successes / total) * 100) : null;
   return { successes, fails, total, score, events };
+}
+
+/**
+ * Attempt-centric view of a session: one record per attempt, carrying the grid
+ * placement the verdict happened at and any events logged during that same
+ * attempt. Grouped by the `attempt` number stamped on each entry, falling back
+ * to a running verdict count for legacy entries that predate the stamp. The
+ * timeline `entries` stay the source of truth — this is derived for analysis,
+ * export, and per-attempt history.
+ */
+export function getAttempts(session: EvalSession): AttemptRecord[] {
+  const byAttempt = new Map<number, AttemptRecord>();
+  let seenVerdicts = 0;
+
+  const recordFor = (attempt: number): AttemptRecord => {
+    let record = byAttempt.get(attempt);
+    if (!record) {
+      record = {
+        id: `${session.id}_attempt_${attempt}`,
+        sessionId: session.id,
+        attempt,
+        cubePosition: null,
+        bowlPosition: null,
+        result: null,
+        events: [],
+        at: "",
+        elapsedMs: 0,
+      };
+      byAttempt.set(attempt, record);
+    }
+    return record;
+  };
+
+  for (const entry of sessionEntries(session)) {
+    const attempt = entry.attempt ?? seenVerdicts + 1;
+    const record = recordFor(attempt);
+    if (entry.cubeCell && record.cubePosition === null) {
+      record.cubePosition = entry.cubeCell;
+    }
+    if (entry.bowlCell && record.bowlPosition === null) {
+      record.bowlPosition = entry.bowlCell;
+    }
+    if (entry.kind === "verdict") {
+      record.id = entry.id;
+      record.result = entry.verdict as Verdict;
+      record.at = entry.at;
+      record.elapsedMs = entry.elapsedMs;
+      seenVerdicts += 1;
+    } else {
+      record.events.push(entry.anomaly as EventId);
+      // Keep a timestamp even for attempts that only have events so far.
+      if (!record.at) {
+        record.at = entry.at;
+        record.elapsedMs = entry.elapsedMs;
+      }
+    }
+  }
+
+  return [...byAttempt.values()].sort((a, b) => a.attempt - b.attempt);
 }
 
 /* ------------------------------------------------------------------ *

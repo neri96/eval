@@ -1,7 +1,9 @@
 import type { EvalSession, SessionColor } from "@/shared/types";
 import { SESSION_COLORS } from "@/shared/constants";
+import { POSITIONS } from "@/shared/grid";
 import { getTask } from "@/shared/tasks";
 import {
+  getAttempts,
   getSessionMetrics,
   wilsonBound,
   type SessionMetrics,
@@ -42,6 +44,167 @@ export function pickFastest(rows: SummaryRow[]): SummaryRow | null {
       (a, b) => b.metrics.ratePerMinute - a.metrics.ratePerMinute,
     )[0] ?? null
   );
+}
+
+/* Cube-in-bowl position analytics. */
+
+type PositionStat = {
+  cell: string;
+  total: number;
+  successes: number;
+  fails: number;
+};
+
+export type CubeHeatmapCell = PositionStat & {
+  count: number;
+  rate: number | null;
+};
+
+type CombinationStat = {
+  cubeCell: string;
+  bowlCell: string;
+  total: number;
+  successes: number;
+  fails: number;
+};
+
+export type CubeCombinationCell = CombinationStat & {
+  count: number;
+  rate: number | null;
+};
+
+export type CubePositionAnalytics = {
+  totalAttempts: number;
+  cubeStart: CubeHeatmapCell[];
+  bowlTarget: CubeHeatmapCell[];
+  cubeBowl: CubeCombinationCell[];
+};
+
+function emptyPositionStats(): Map<string, PositionStat> {
+  return new Map(
+    POSITIONS.map((position) => [
+      position.cell,
+      {
+        cell: position.cell,
+        total: 0,
+        successes: 0,
+        fails: 0,
+      },
+    ]),
+  );
+}
+
+function toHeatmapCells(
+  stats: Map<string, PositionStat>,
+): CubeHeatmapCell[] {
+  return POSITIONS.map((position) => {
+    const stat = stats.get(position.cell)!;
+    return {
+      ...stat,
+      count: stat.successes,
+      rate: stat.total > 0 ? (stat.successes / stat.total) * 100 : null,
+    };
+  });
+}
+
+const comboKey = (cubeCell: string, bowlCell: string) =>
+  `${cubeCell}->${bowlCell}`;
+
+function emptyCombinationStats(): Map<string, CombinationStat> {
+  const stats = new Map<string, CombinationStat>();
+  for (const cube of POSITIONS) {
+    for (const bowl of POSITIONS) {
+      stats.set(comboKey(cube.cell, bowl.cell), {
+        cubeCell: cube.cell,
+        bowlCell: bowl.cell,
+        total: 0,
+        successes: 0,
+        fails: 0,
+      });
+    }
+  }
+  return stats;
+}
+
+function toCombinationCells(
+  stats: Map<string, CombinationStat>,
+): CubeCombinationCell[] {
+  return POSITIONS.flatMap((cube) =>
+    POSITIONS.map((bowl) => {
+      const stat = stats.get(comboKey(cube.cell, bowl.cell))!;
+      return {
+        ...stat,
+        count: stat.successes,
+        rate: stat.total > 0 ? (stat.successes / stat.total) * 100 : null,
+      };
+    }),
+  );
+}
+
+export function buildCubePositionAnalytics(
+  rows: SummaryRow[],
+): CubePositionAnalytics {
+  const validCells = new Set<string>(
+    POSITIONS.map((position) => position.cell),
+  );
+  const cubeStats = emptyPositionStats();
+  const bowlStats = emptyPositionStats();
+  const combinationStats = emptyCombinationStats();
+  let totalAttempts = 0;
+
+  const add = (
+    stats: Map<string, PositionStat>,
+    cell: string | null,
+    result: "success" | "fail",
+  ) => {
+    if (!cell || !validCells.has(cell)) return;
+    const stat = stats.get(cell);
+    if (!stat) return;
+    stat.total += 1;
+    if (result === "success") stat.successes += 1;
+    else stat.fails += 1;
+  };
+
+  const addCombination = (
+    cubeCell: string | null,
+    bowlCell: string | null,
+    result: "success" | "fail",
+  ) => {
+    if (
+      !cubeCell ||
+      !bowlCell ||
+      !validCells.has(cubeCell) ||
+      !validCells.has(bowlCell)
+    ) {
+      return;
+    }
+    const stat = combinationStats.get(comboKey(cubeCell, bowlCell));
+    if (!stat) return;
+    stat.total += 1;
+    if (result === "success") stat.successes += 1;
+    else stat.fails += 1;
+  };
+
+  for (const row of rows) {
+    for (const attempt of getAttempts(row.session)) {
+      if (!attempt.result) continue;
+      totalAttempts += 1;
+      add(cubeStats, attempt.cubePosition, attempt.result);
+      add(bowlStats, attempt.bowlPosition, attempt.result);
+      addCombination(
+        attempt.cubePosition,
+        attempt.bowlPosition,
+        attempt.result,
+      );
+    }
+  }
+
+  return {
+    totalAttempts,
+    cubeStart: toHeatmapCells(cubeStats),
+    bowlTarget: toHeatmapCells(bowlStats),
+    cubeBowl: toCombinationCells(combinationStats),
+  };
 }
 
 /* By-model aggregation (ported from legacy buildModelComparisonRows). */

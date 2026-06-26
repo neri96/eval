@@ -106,3 +106,36 @@
 .navAction:active .utilityBtn {
   transform: scale(0.95);
 }
+
+@media (max-width: 560px) {
+  .headerBar {
+    padding: 10px 16px;
+    gap: 10px;
+  }
+
+  .brand {
+    gap: 8px;
+  }
+
+  .logo {
+    font-size: 16px;
+  }
+
+  .sep {
+    font-size: 16px;
+  }
+
+  .taskName {
+    max-width: 86px;
+    font-size: 12px;
+  }
+
+  .nav {
+    gap: 2px;
+    flex-shrink: 0;
+  }
+
+  .navActionLabel {
+    display: none;
+  }
+}

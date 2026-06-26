@@ -1,18 +1,19 @@
 .controls {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   justify-content: center;
-  margin: 20px 0;
+  margin: 12px 0;
   flex-wrap: wrap;
 }
 
 .btn {
+  flex-grow: 1;
   font-family: var(--sans);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  padding: 9px 22px;
+  padding: 7px 16px;
   border-radius: 3px;
   border: 1px solid var(--border-bright);
   background: var(--surface2);

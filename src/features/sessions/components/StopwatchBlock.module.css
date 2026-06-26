@@ -1,6 +1,6 @@
 .stopwatchBlock {
   text-align: center;
-  padding: 28px 0 20px;
+  padding: 14px 0 12px;
   position: relative;
 }
 
@@ -10,7 +10,7 @@
   letter-spacing: 0.3em;
   color: var(--text-dimmer);
   text-transform: uppercase;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .colorTag {
@@ -28,7 +28,7 @@
 
 .timer {
   font-family: var(--mono);
-  font-size: 72px;
+  font-size: 58px;
   letter-spacing: 0.05em;
   color: var(--accent);
   line-height: 1;
@@ -60,7 +60,7 @@
   width: 100%;
   height: 3px;
   background: var(--border);
-  margin-top: 14px;
+  margin-top: 10px;
   border-radius: 2px;
   overflow: hidden;
 }

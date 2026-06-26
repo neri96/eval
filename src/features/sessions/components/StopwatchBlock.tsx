@@ -4,7 +4,6 @@ import { currentRollout, elapsedOf } from "@/store/helpers";
 import { formatClock } from "@/shared/utils/time";
 import { useElapsedTick } from "../hooks/useElapsedTick";
 import { DurationControls } from "./DurationControls";
-import { SessionMeta } from "./SessionMeta";
 import styles from "./StopwatchBlock.module.css";
 
 export function StopwatchBlock() {
@@ -70,7 +69,6 @@ export function StopwatchBlock() {
         />
       </div>
       <DurationControls />
-      <SessionMeta />
     </div>
   );
 }

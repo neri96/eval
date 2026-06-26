@@ -1,14 +1,18 @@
-import { useState } from "react";
+import { Fragment, useState, type CSSProperties } from "react";
 import { Dialog } from "radix-ui";
 import type { SummaryGraphMetric, SummaryView, TaskId } from "@/shared/types";
 import { SESSION_COLORS } from "@/shared/constants";
+import { POSITIONS } from "@/shared/grid";
 import { getTask } from "@/shared/tasks";
 import { useEvalStore } from "@/store/evalStore";
 import { selectFilteredSessions } from "@/store/selectors";
 import {
+  buildCubePositionAnalytics,
   buildModelReportClipboard,
   buildModelRows,
   buildSummaryRows,
+  type CubeCombinationCell,
+  type CubeHeatmapCell,
   pickBest,
   pickFastest,
   type ReportFormat,
@@ -21,6 +25,7 @@ const VIEWS: { id: SummaryView; label: string }[] = [
   { id: "list", label: "LIST" },
   { id: "chart", label: "CHART" },
   { id: "models", label: "BY MODEL" },
+  { id: "analytics", label: "ANALYTICS" },
 ];
 
 const COPY_OPTIONS: { id: ReportFormat; label: string }[] = [
@@ -89,6 +94,149 @@ function graphFormat(row: SummaryRow, metric: SummaryGraphMetric): string {
   return row.metrics.score === null ? "—" : `${row.metrics.score}%`;
 }
 
+function heatmapCellStyle(
+  cell: { rate: number | null },
+): CSSProperties {
+  if (cell.rate === null) return {};
+  const rate = cell.rate;
+  const alpha =
+    rate >= 70
+      ? 0.2 + ((rate - 70) / 30) * 0.44
+      : rate >= 40
+        ? 0.22 + (Math.abs(rate - 55) / 30) * 0.18
+        : 0.2 + ((40 - rate) / 40) * 0.44;
+  const color =
+    rate >= 70 ? "34, 197, 94" : rate >= 40 ? "245, 158, 11" : "248, 113, 113";
+  return {
+    background: `rgba(${color}, ${alpha})`,
+    borderColor: `rgba(${color}, ${Math.min(0.9, alpha + 0.18)})`,
+  };
+}
+
+function comboCellStyle(
+  cell: CubeCombinationCell,
+): CSSProperties {
+  if (cell.total === 0) {
+    return cell.cubeCell === cell.bowlCell
+      ? { opacity: 0.35 }
+      : {};
+  }
+  return heatmapCellStyle(cell);
+}
+
+function HeatmapCard({
+  title,
+  subtitle,
+  cells,
+}: {
+  title: string;
+  subtitle: string;
+  cells: CubeHeatmapCell[];
+}) {
+  return (
+    <section className={styles.heatmapCard}>
+      <div className={styles.heatmapHeader}>
+        <div>
+          <h3 className={styles.heatmapTitle}>{title}</h3>
+          <p className={styles.heatmapSubtitle}>{subtitle}</p>
+        </div>
+      </div>
+      <div className={styles.heatmapGrid}>
+        {cells.map((cell) => (
+          <div
+            key={cell.cell}
+            className={styles.heatmapCell}
+            style={heatmapCellStyle(cell)}
+            title={`${cell.cell}: ${
+              cell.rate === null
+                ? "no attempts"
+                : `${Math.round(cell.rate)}% success (${cell.successes}/${cell.total}), ${cell.fails} fail`
+            }`}
+          >
+            <span className={styles.heatmapCellName}>{cell.cell}</span>
+            <span className={scoreClass(cell.rate)}>
+              {cell.rate === null ? "—" : `${Math.round(cell.rate)}%`}
+            </span>
+            <span className={styles.heatmapCellMeta}>
+              {cell.total ? `${cell.successes}/${cell.total}` : "0 attempts"}
+            </span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function CombinationMatrix({
+  title,
+  subtitle,
+  cells,
+}: {
+  title: string;
+  subtitle: string;
+  cells: CubeCombinationCell[];
+}) {
+  const byPair = new Map(
+    cells.map((cell) => [`${cell.cubeCell}->${cell.bowlCell}`, cell]),
+  );
+  const gridStyle = {
+    "--combo-cols": POSITIONS.length,
+  } as CSSProperties;
+
+  return (
+    <section className={`${styles.heatmapCard} ${styles.comboCard}`}>
+      <div className={styles.heatmapHeader}>
+        <div>
+          <h3 className={styles.heatmapTitle}>{title}</h3>
+          <p className={styles.heatmapSubtitle}>{subtitle}</p>
+        </div>
+      </div>
+      <div className={styles.comboScroll}>
+        <div className={styles.comboGrid} style={gridStyle}>
+          <div className={`${styles.comboHeaderCell} ${styles.comboCorner}`}>
+            Cube / Bowl
+          </div>
+          {POSITIONS.map((bowl) => (
+            <div key={bowl.cell} className={styles.comboHeaderCell}>
+              {bowl.cell}
+            </div>
+          ))}
+          {POSITIONS.map((cube) => (
+            <Fragment key={cube.cell}>
+              <div key={`${cube.cell}-label`} className={styles.comboRowLabel}>
+                {cube.cell}
+              </div>
+              {POSITIONS.map((bowl) => {
+                const cell = byPair.get(`${cube.cell}->${bowl.cell}`);
+                if (!cell) return null;
+                return (
+                  <div
+                    key={`${cube.cell}-${bowl.cell}`}
+                    className={styles.comboCell}
+                    style={comboCellStyle(cell)}
+                    title={`${cube.cell} -> ${bowl.cell}: ${
+                      cell.rate === null
+                        ? "no attempts"
+                        : `${Math.round(cell.rate)}% success (${cell.successes}/${cell.total}), ${cell.fails} fail`
+                    }`}
+                  >
+                    <span className={scoreClass(cell.rate)}>
+                      {cell.rate === null ? "—" : `${Math.round(cell.rate)}%`}
+                    </span>
+                    <span className={styles.comboCellMeta}>
+                      {cell.total ? `${cell.successes}/${cell.total}` : "0"}
+                    </span>
+                  </div>
+                );
+              })}
+            </Fragment>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function SelectionSummaryModal({ open }: { open: boolean }) {
   const closeModal = useEvalStore((state) => state.closeModal);
   const view = useEvalStore((state) => state.summaryView);
@@ -108,6 +256,7 @@ export function SelectionSummaryModal({ open }: { open: boolean }) {
     : selectFilteredSessions(useEvalStore.getState());
   const rows = buildSummaryRows(targets);
   const modelRows = buildModelRows(rows);
+  const cubeAnalytics = buildCubePositionAnalytics(rows);
   const best = pickBest(rows);
   const fastest = pickFastest(rows);
   const scope = selectedIds.length
@@ -220,6 +369,34 @@ export function SelectionSummaryModal({ open }: { open: boolean }) {
           {rows.length === 0 ? (
             <div className={styles.empty}>
               SELECT SESSIONS TO GENERATE A SUMMARY
+            </div>
+          ) : view === "analytics" ? (
+            <div className={styles.analyticsWrap}>
+              <div className={styles.analyticsIntro}>
+                <span className={styles.analyticsKicker}>GRID ANALYTICS</span>
+                <span className={styles.analyticsMeta}>
+                  {cubeAnalytics.totalAttempts} ATTEMPTS WITH VERDICTS
+                </span>
+              </div>
+              <div className={styles.heatmapCards}>
+                <HeatmapCard
+                  title="Cube Start"
+                  subtitle="Success rate by cube start cell."
+                  cells={cubeAnalytics.cubeStart}
+                />
+                <HeatmapCard
+                  title="Bowl Target"
+                  subtitle="Success rate by bowl target cell."
+                  cells={cubeAnalytics.bowlTarget}
+                />
+              </div>
+              <div className={styles.comboMatrices}>
+                <CombinationMatrix
+                  title="Cube → Bowl Combinations"
+                  subtitle="Success rate for each exact cube start and bowl target pair."
+                  cells={cubeAnalytics.cubeBowl}
+                />
+              </div>
             </div>
           ) : view === "chart" ? (
             <div className={styles.graphWrap}>

@@ -1,15 +1,15 @@
 .grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 16px;
+  gap: 8px;
+  margin-top: 8px;
 }
 
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 6px;
-  padding: 12px;
+  padding: 9px;
   text-align: left;
   min-width: 0;
 }
@@ -20,14 +20,14 @@
   letter-spacing: 0.18em;
   color: var(--text-dimmer);
   text-transform: uppercase;
-  margin-bottom: 8px;
+  margin-bottom: 5px;
 }
 
 .display {
   width: 100%;
   text-align: left;
   font-family: var(--sans);
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.08em;
   color: var(--text-dim);
@@ -35,7 +35,7 @@
   background: var(--surface2);
   border: 1px dashed transparent;
   border-radius: 4px;
-  padding: 10px 12px;
+  padding: 7px 10px;
   cursor: pointer;
   transition: all 0.15s;
   overflow: hidden;
@@ -71,14 +71,14 @@
 .input {
   width: 100%;
   font-family: var(--sans);
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   background: var(--surface2);
   border: 1px solid var(--accent);
   color: var(--text);
-  padding: 5px 12px;
+  padding: 5px 10px;
   border-radius: 3px;
   outline: none;
 }

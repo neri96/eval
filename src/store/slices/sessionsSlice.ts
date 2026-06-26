@@ -1,11 +1,26 @@
 import type {
+  CubeOrder,
   EvalSession,
   EventId,
+  GridContext,
+  GridMode,
   LegoConfig,
   RemovedItem,
   SessionColor,
 } from "@/shared/types";
-import { DEFAULT_DURATION_SEC } from "@/shared/constants";
+import {
+  cellLabel,
+  FIRST_CELL,
+  nextBowlGrid,
+  passCells,
+  randomBowlCell,
+} from "@/shared/grid";
+import {
+  DEFAULT_DURATION_SEC,
+  DEFAULT_PASSES,
+  MAX_PASSES,
+  MIN_PASSES,
+} from "@/shared/constants";
 import { getTask } from "@/shared/tasks";
 import {
   bank,
@@ -21,6 +36,140 @@ import {
   sanitizeDuration,
 } from "../helpers";
 import type { SliceCreator } from "../evalStore";
+
+/* ------------------------------------------------------------------ *
+ * Cube-in-bowl grid traversal.
+ *
+ * Two independent axes drive the cube + bowl:
+ *  - gridMode "standard": the bowl is re-rolled to a random cell each step, and
+ *    one pass = the cube visiting all 15 cells once.
+ *    gridMode "matrix": the bowl holds one cell while the cube sweeps the other
+ *    14 (a "sub-sweep"), then steps to the next cell. One pass is the FULL
+ *    cube×bowl sweep — the bowl visits every cell, each with its own sub-sweep —
+ *    so a pass only completes when the bowl wraps back to the start.
+ *  - cubeOrder "ordered": cube visits cells in grid order; the run auto-finishes
+ *    after `passTarget` passes (clock is unlimited). cubeOrder "random": cube
+ *    visits every cell once per (sub-)sweep in random order and the passes cycle
+ *    forever, bounded only by the session timer (or a manual stop).
+ * ------------------------------------------------------------------ */
+
+// Lay the cube's route for the current bowl cell and place it on the first cell.
+// Matrix: the cube sweeps every cell except the bowl's. Standard: the cube
+// sweeps all cells and the bowl is re-rolled to a fresh random cell.
+function layCubeRoute(session: EvalSession) {
+  const order = session.cubeOrder ?? "ordered";
+  if ((session.gridMode ?? "standard") === "matrix") {
+    const cells = passCells(order, session.bowlPosition);
+    session.cubePosition = cells[0];
+    session.passQueue = cells.slice(1);
+  } else {
+    const cells = passCells(order);
+    session.cubePosition = cells[0];
+    session.passQueue = cells.slice(1);
+    session.bowlPosition = randomBowlCell(
+      session.cubePosition,
+      session.bowlPosition,
+    );
+  }
+}
+
+// (Re)initialize the grid for the session's current mode/order. Used on create,
+// restart, and whenever a setting changes before the run starts.
+function initGrid(session: EvalSession) {
+  session.cubePass = 0;
+  if ((session.gridMode ?? "standard") === "matrix") {
+    session.bowlPosition = FIRST_CELL;
+  }
+  layCubeRoute(session);
+}
+
+// End the run once an ordered session has completed its target passes.
+function finishGridRun(session: EvalSession) {
+  const rollout = currentRollout(session);
+  bank(rollout);
+  rollout.endedAt = now();
+  session.status = "done";
+  session.endedAt = now();
+}
+
+// Bump the completed-pass counter and either finish an ordered run that hit its
+// target or roll into the next pass. Returns true when the run finished.
+function completePass(session: EvalSession): boolean {
+  session.cubePass = (session.cubePass ?? 0) + 1;
+  if ((session.cubeOrder ?? "ordered") === "ordered") {
+    if (session.cubePass >= (session.passTarget ?? DEFAULT_PASSES)) {
+      finishGridRun(session);
+      return true;
+    }
+  }
+  return false;
+}
+
+// Every verdict (success/fail/bad-grasp) walks the cube one step along its
+// (sub-)sweep. No-op for sessions without grid positions (e.g. lego).
+function advanceCube(session: EvalSession) {
+  if (!session.cubePosition || !session.bowlPosition) return;
+  // Legacy/in-progress sessions predating the pass engine: lazily set up a route.
+  if (!session.passQueue) {
+    initGrid(session);
+    return;
+  }
+
+  // Mid-sweep: step to the next queued cell (re-rolling the bowl in standard mode).
+  if (session.passQueue.length > 0) {
+    session.cubePosition = session.passQueue.shift()!;
+    if ((session.gridMode ?? "standard") === "standard") {
+      session.bowlPosition = randomBowlCell(
+        session.cubePosition,
+        session.bowlPosition,
+      );
+    }
+    return;
+  }
+
+  if ((session.gridMode ?? "standard") === "matrix") {
+    // Sub-sweep done. Step the bowl on; a pass only completes once the bowl has
+    // visited every cell and wrapped back to the start.
+    const nextBowl = nextBowlGrid(session.bowlPosition);
+    if (nextBowl !== FIRST_CELL) {
+      session.bowlPosition = nextBowl;
+      layCubeRoute(session);
+      return;
+    }
+    if (completePass(session)) return;
+    session.bowlPosition = FIRST_CELL;
+    layCubeRoute(session);
+    return;
+  }
+
+  // Standard: a single cube sweep is the whole pass.
+  if (completePass(session)) return;
+  layCubeRoute(session);
+}
+
+// The 1-based attempt number for the entry about to be logged: one past the
+// verdicts already recorded this session (events share their attempt's number).
+function attemptNumber(session: EvalSession): number {
+  let verdicts = 0;
+  for (const rollout of session.rollouts) {
+    for (const entry of rollout.entries) {
+      if (entry.kind === "verdict") verdicts += 1;
+    }
+  }
+  return verdicts + 1;
+}
+
+// Grid context to stamp on an entry: where the cube/bowl are right now (before
+// the cube advances) plus the attempt number. Cell fields are omitted for
+// grid-less tasks (lego), where only the attempt number is meaningful.
+function gridContext(session: EvalSession): GridContext {
+  const ctx: GridContext = { attempt: attemptNumber(session) };
+  if (session.cubePosition && session.bowlPosition) {
+    ctx.cubeCell = cellLabel(session.cubePosition);
+    ctx.bowlCell = cellLabel(session.bowlPosition);
+  }
+  return ctx;
+}
 
 /**
  * Sessions slice — the session entity store plus the current-session
@@ -47,6 +196,9 @@ export type SessionsSlice = {
   completeRollout: () => void;
   glitchCurrentRollout: () => void;
   setLegoConfig: (config: Partial<LegoConfig>) => void;
+  setGridMode: (mode: GridMode) => void;
+  setCubeOrder: (order: CubeOrder) => void;
+  setPassTarget: (passes: number) => void;
 
   setCurrentTitle: (title: string) => void;
   setCurrentModel: (model: string) => void;
@@ -117,6 +269,16 @@ export const createSessionsSlice: SliceCreator<SessionsSlice> = (set, get) => ({
         session.durationSec = 0;
       }
 
+      // Cube-in-bowl: default to a standard, ordered 3-pass run. Ordered runs
+      // are pass-bounded, so the clock starts unlimited.
+      if (session.taskId === "cube-in-bowl") {
+        session.gridMode = "standard";
+        session.cubeOrder = "ordered";
+        session.passTarget = DEFAULT_PASSES;
+        session.durationSec = 0;
+        initGrid(session);
+      }
+
       state.sessions.unshift(session);
       state.currentSessionId = session.id;
     }),
@@ -182,6 +344,7 @@ export const createSessionsSlice: SliceCreator<SessionsSlice> = (set, get) => ({
       session.status = "initial";
       session.endedAt = null;
       session.rollouts = [makeRollout(0)];
+      if (session.taskId === "cube-in-bowl") initGrid(session);
     }),
 
   resumeSession: (sessionId) =>
@@ -257,6 +420,44 @@ export const createSessionsSlice: SliceCreator<SessionsSlice> = (set, get) => ({
       Object.assign(session.lego, config);
     }),
 
+  // Mode/order/passes are part of the run setup, so they only change while the
+  // session is still pristine; each change re-lays the grid.
+  setGridMode: (mode) =>
+    set((state) => {
+      const session = state.sessions.find(
+        (item) => item.id === state.currentSessionId,
+      );
+      if (!session || session.status !== "initial") return;
+      session.gridMode = mode;
+      initGrid(session);
+    }),
+
+  setCubeOrder: (order) =>
+    set((state) => {
+      const session = state.sessions.find(
+        (item) => item.id === state.currentSessionId,
+      );
+      if (!session || session.status !== "initial") return;
+      session.cubeOrder = order;
+      // Ordered runs are pass-bounded, so the clock is forced to unlimited;
+      // random runs are time-bounded and keep whatever duration is set.
+      if (order === "ordered") session.durationSec = 0;
+      initGrid(session);
+    }),
+
+  setPassTarget: (passes) =>
+    set((state) => {
+      const session = state.sessions.find(
+        (item) => item.id === state.currentSessionId,
+      );
+      if (!session || session.status !== "initial") return;
+      if (!Number.isFinite(passes)) return;
+      session.passTarget = Math.min(
+        MAX_PASSES,
+        Math.max(MIN_PASSES, Math.round(passes)),
+      );
+    }),
+
   /* ---- metadata ---- */
 
   setCurrentTitle: (title) =>
@@ -323,7 +524,9 @@ export const createSessionsSlice: SliceCreator<SessionsSlice> = (set, get) => ({
         verdict: "success",
         at: now(),
         elapsedMs: elapsedOf(rollout),
+        ...gridContext(session),
       });
+      advanceCube(session);
     }),
 
   addFail: () =>
@@ -339,7 +542,9 @@ export const createSessionsSlice: SliceCreator<SessionsSlice> = (set, get) => ({
         verdict: "fail",
         at: now(),
         elapsedMs: elapsedOf(rollout),
+        ...gridContext(session),
       });
+      advanceCube(session);
     }),
 
   addEvent: (event) =>
@@ -353,7 +558,10 @@ export const createSessionsSlice: SliceCreator<SessionsSlice> = (set, get) => ({
         return;
       }
       const rollout = currentRollout(session);
-      // A bad grasp still means a successful placement happened.
+      // A bad grasp still means a successful placement happened. Stamp both the
+      // verdict and the event with the same pre-advance grid context + attempt,
+      // so the anomaly belongs to the attempt it actually occurred on.
+      const context = gridContext(session);
       if (event === "bad_grasp") {
         rollout.entries.push({
           id: createId("entry"),
@@ -361,7 +569,9 @@ export const createSessionsSlice: SliceCreator<SessionsSlice> = (set, get) => ({
           verdict: "success",
           at: now(),
           elapsedMs: elapsedOf(rollout),
+          ...context,
         });
+        advanceCube(session);
       }
       rollout.entries.push({
         id: createId("entry"),
@@ -369,6 +579,7 @@ export const createSessionsSlice: SliceCreator<SessionsSlice> = (set, get) => ({
         anomaly: event,
         at: now(),
         elapsedMs: elapsedOf(rollout),
+        ...context,
       });
     }),
 

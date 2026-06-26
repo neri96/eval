@@ -16,8 +16,10 @@ export function DurationControls() {
   const current = useEvalStore(selectCurrentSession);
   const [customMinutes, setCustomMinutes] = useState("");
 
-  // Locked once the current session has begun (legacy: running || elapsed > 0).
-  const locked = !!current && current.status !== "initial";
+  // Locked once the current session has begun (legacy: running || elapsed > 0),
+  // and while an ordered cube run owns the clock (it's pass-bounded → unlimited).
+  const orderedRun = current?.cubeOrder === "ordered";
+  const locked = (!!current && current.status !== "initial") || orderedRun;
 
   const applyCustom = () => {
     const minutes = Number(customMinutes);
@@ -66,9 +68,6 @@ export function DurationControls() {
         >
           SET
         </button>
-      </div>
-      <div className={styles.lockNote}>
-        {locked ? "DURATION LOCKED FOR ACTIVE SESSION" : ""}
       </div>
     </div>
   );

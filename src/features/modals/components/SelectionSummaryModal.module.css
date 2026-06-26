@@ -13,7 +13,7 @@
   background: var(--surface);
   border: 1px solid var(--border-bright);
   border-radius: 6px;
-  width: min(960px, calc(100vw - 26px));
+  width: min(1000px, calc(100vw - 26px));
   max-height: min(82vh, 760px);
   padding: 20px;
   display: flex;
@@ -182,6 +182,204 @@
   font-weight: 800;
   letter-spacing: 0.05em;
   color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.analyticsWrap {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface2);
+  padding: 12px;
+  overflow: auto;
+  scrollbar-gutter: stable;
+  flex: 1;
+  min-height: 220px;
+}
+
+.analyticsIntro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.analyticsKicker,
+.analyticsMeta {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.analyticsKicker {
+  color: var(--text-dim);
+  font-weight: 800;
+}
+
+.analyticsMeta {
+  color: var(--text-dimmer);
+}
+
+.heatmapCards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.heatmapCard {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 12px;
+}
+
+.heatmapHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.heatmapTitle {
+  margin: 0;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--text);
+  text-transform: uppercase;
+}
+
+.heatmapSubtitle {
+  margin: 4px 0 0;
+  font-family: var(--mono);
+  font-size: 10px;
+  line-height: 1.35;
+  color: var(--text-dimmer);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.heatmapGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(52px, 1fr));
+  gap: 6px;
+}
+
+.heatmapCell {
+  min-height: 58px;
+  display: grid;
+  grid-template-rows: auto auto auto;
+  align-content: center;
+  gap: 2px;
+  padding: 7px 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--text-dim);
+  text-align: center;
+  overflow: hidden;
+}
+
+.heatmapCellName {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text);
+  font-weight: 800;
+}
+
+.heatmapCellMeta {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text-dimmer);
+  white-space: nowrap;
+}
+
+.comboMatrices {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.comboCard {
+  min-width: 0;
+}
+
+.comboScroll {
+  overflow: auto;
+  scrollbar-gutter: stable;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.comboGrid {
+  display: grid;
+  grid-template-columns: 78px repeat(var(--combo-cols), minmax(54px, 1fr));
+  min-width: 888px;
+}
+
+.comboHeaderCell,
+.comboRowLabel,
+.comboCell {
+  min-height: 42px;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.comboHeaderCell,
+.comboRowLabel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #20202a;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.comboHeaderCell {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+
+.comboRowLabel {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+}
+
+.comboCorner {
+  left: 0;
+  z-index: 4;
+  padding: 0 8px;
+  text-align: center;
+}
+
+.comboCell {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 2px;
+  padding: 5px 4px;
+  background: rgba(255, 255, 255, 0.04);
+  text-align: center;
+  overflow: hidden;
+}
+
+.comboCellMeta {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text-dimmer);
   white-space: nowrap;
 }
 
@@ -496,4 +694,10 @@
   color: var(--text-dimmer);
   text-align: center;
   padding: 30px;
+}
+
+@media (max-width: 760px) {
+  .heatmapCards {
+    grid-template-columns: 1fr;
+  }
 }
